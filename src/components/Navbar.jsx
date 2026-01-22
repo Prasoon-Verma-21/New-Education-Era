@@ -1,92 +1,98 @@
-import logo from '../assets/Logo.webp';
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-// Make sure to import your logo image correctly
-// import logo from '../assets/Logo.webp'; 
+import { auth, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { useAuth } from "../context/AuthContext";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import logo from "../assets/logo.webp";
 
 const Navbar = () => {
-  // Get the current page path to determine which link is active
+  const { isLoggedIn, setIsLoggedIn } = useAuth();
+  const [userData, setUserData] = useState(null);
+  const navigate = useNavigate();
   const location = useLocation();
-  const path = location.pathname;
 
-  // Define the common styles for all navigation buttons
-  // px-3 py-2: Padding for the button size
-  // rounded-md: Rounded corners like in your screenshot
-  // text-sm font-medium: Font styling
-  // transition-colors: Smooth fade for hover effects
-  const baseLinkStyle = "px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200";
-  
-  // Style for the button that matches the current page (Blue background)
-  const activeLinkStyle = "bg-blue-600 text-white";
-  
-  // Style for buttons that are not active (Gray text, light gray hover)
-  const inactiveLinkStyle = "text-gray-700 hover:bg-gray-100 hover:text-gray-900";
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        if (docSnap.exists()) setUserData(docSnap.data());
+      } else {
+        setIsLoggedIn(false);
+        setUserData(null);
+      }
+    });
+    return () => unsubscribe();
+  }, [setIsLoggedIn]);
 
-  // Helper function to combine styles based on the URL
-  const getLinkStyle = (linkPath) => {
-    // If the current path matches the link, use active style, otherwise use inactive
-    return `${baseLinkStyle} ${path === linkPath ? activeLinkStyle : inactiveLinkStyle}`;
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/signin");
+  };
+
+  // ROBUST PATH MATCHING LOGIC
+  const getLinkStyle = (path) => {
+    // Normalize both paths by removing trailing slashes and making lowercase
+    const normalizedCurrent = location.pathname.replace(/\/$/, "").toLowerCase() || "/";
+    const normalizedPath = path.replace(/\/$/, "").toLowerCase() || "/";
+
+    const isActive = normalizedCurrent === normalizedPath;
+
+    const baseClasses = "px-3 py-1.5 rounded-md transition-all whitespace-nowrap text-xs lg:text-sm font-bold tracking-tight";
+
+    return isActive
+        ? `${baseClasses} bg-blue-600 text-white shadow-lg ring-1 ring-blue-400` // High contrast "Blue Box"
+        : `${baseClasses} text-gray-600 hover:text-blue-600 hover:bg-blue-50`;
   };
 
   return (
-    // Fixed navbar with shadow and white background
-    <nav className="bg-white shadow-sm fixed top-0 left-0 w-full z-50 border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          
-          {/* Logo and Brand Name */}
-          <div className="flex-shrink-0 flex items-center cursor-pointer">
-            <Link to="/" className="flex items-center">
-            <img className="h-10 w-auto" src={logo} alt="EduHub Logo" />
-            <span className="ml-2 text-xl font-bold text-gray-900">New Education Era</span>
-            </Link>
-          </div>
+      <nav className="fixed top-0 left-0 w-full bg-white shadow-md z-50 flex justify-between items-center px-4 py-3">
 
-          {/* Navigation Links - Hidden on mobile, flex on desktop */}
-          <div className="hidden md:block">
-            {/* space-x-2 adds uniform spacing between all buttons */}
-            <div className="ml-10 flex items-baseline space-x-2">
-              <Link to="/" className={getLinkStyle('/')}>Home</Link>
-              <Link to="/about" className={getLinkStyle('/about')}>About</Link>
-              {/* Assuming you have a contact route, if not, this will just be a button */}
-              <Link to="/contact" className={getLinkStyle('/contact')}>Contact Us</Link>
-              
-              {/* New Links with the same consistent styling */}
-              <Link to="/early-warning" className={getLinkStyle('/early-warning')}>
-                Early Warning
-              </Link>
-              <Link to="/admin/school-dropout" className={getLinkStyle('/admin/school-dropout')}>
-                Dropout Analytics
-              </Link>
-              <Link to="/subadmin/student-details" className={getLinkStyle('/subadmin/student-details')}>
-                Student Monitoring
-              </Link>
-            </div>
-          </div>
-
-          {/* Sign In Button - Points specifically to /signup */}
-          <div className="hidden md:block">
-            <Link 
-            to="/signup" 
-            className="ml-4 px-4 py-2 border border-blue-600 text-blue-600 rounded-md text-sm font-medium hover:bg-blue-50 transition-colors duration-200"
-            >
-              Sign In
-            </Link>
-            </div>
-          
-          {/* Mobile Menu Button (Hamburger) - Placeholder for future */}
-          <div className="-mr-2 flex md:hidden">
-              <button type="button" className="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <span className="sr-only">Open main menu</span>
-                {/* Icon for hamburger menu would go here */}
-                <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-          </div>
+        {/* 1. LOGO SECTION */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <img src={logo} alt="Logo" className="h-9 w-9 object-contain" />
+          <span className="text-lg font-bold text-gray-800 hidden sm:block">New Education Era</span>
         </div>
-      </div>
-    </nav>
+
+        {/* 2. CENTER LINKS */}
+        <div className="flex items-center gap-1 lg:gap-2 flex-grow justify-center">
+          <Link to="/" className={getLinkStyle("/")}>Home</Link>
+          <Link to="/about" className={getLinkStyle("/about")}>About</Link>
+          <Link to="/contact" className={getLinkStyle("/contact")}>Contact Us</Link>
+
+          {isLoggedIn && (userData?.role === 'teacher' || userData?.role === 'admin' || userData?.role === 'subadmin') && (
+              <>
+                <Link to="/early-warning" className={getLinkStyle("/early-warning")}>Early Warning</Link>
+                <Link to="/dropout-analytics" className={getLinkStyle("/dropout-analytics")}>Dropout Analytics</Link>
+                <Link to="/student-monitoring" className={getLinkStyle("/student-monitoring")}>Student Monitoring</Link>
+              </>
+          )}
+        </div>
+
+        {/* 3. PROFILE SECTION */}
+        <div className="flex items-center gap-3 flex-shrink-0 border-l pl-3 ml-2">
+          {isLoggedIn && userData ? (
+              <div className="flex items-center gap-2">
+                <div className="text-right hidden md:block">
+                  <p className="text-blue-600 font-extrabold text-[11px] leading-none uppercase">
+                    {userData.username || userData.name}
+                  </p>
+                  <p className="text-[9px] uppercase text-gray-400 font-bold">
+                    ({userData.role})
+                  </p>
+                </div>
+                <button onClick={handleLogout} className="bg-red-500 text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-red-600 shadow-sm transition-all">
+                  Logout
+                </button>
+              </div>
+          ) : (
+              <button onClick={() => navigate("/signin")} className="border-2 border-blue-600 text-blue-600 px-4 py-1 rounded-md text-xs font-bold hover:bg-blue-600 transition-all">
+                Sign In
+              </button>
+          )}
+        </div>
+      </nav>
   );
 };
 
