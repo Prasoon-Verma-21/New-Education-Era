@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'; // Removed 'React' to fix no-unused-vars
 import jsPDF from 'jspdf';
-import { db, auth } from "../firebase"; // Integrated Firebase
+import { db, auth } from "../firebase";
 import { doc, getDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
 const EarlyWarning = () => {
-  const { isLoggedIn } = useAuth();
-  const [inputMode, setInputMode] = useState("manual"); // Toggle state
-  const [students, setStudents] = useState([]); // List from DB
+  const { isLoggedIn, userData } = useAuth(); // Destructure userData here at the TOP
+  const [inputMode, setInputMode] = useState("manual");
+  const [students, setStudents] = useState([]);
   const [formData, setFormData] = useState({
     name: '', attendance: '', distance: '', parentJob: 'Agriculture',
     parentEdu: 'Primary', gpa: '', participation: '5', areaType: 'Rural',
@@ -18,7 +18,6 @@ const EarlyWarning = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzedName, setAnalyzedName] = useState('');
 
-  // 1. NEW: Fetch Teacher's specific class students
   useEffect(() => {
     const fetchStudents = async () => {
       if (auth.currentUser) {
@@ -34,7 +33,6 @@ const EarlyWarning = () => {
     if (inputMode === "database") fetchStudents();
   }, [inputMode, isLoggedIn]);
 
-  // 2. NEW: Load data from selection
   const handleStudentSelect = (e) => {
     const student = students.find(s => s.id === e.target.value);
     if (student) {
@@ -43,19 +41,26 @@ const EarlyWarning = () => {
     }
   };
 
-  // 3. NEW: Save Manual Student to DB
+  // 1. Unified Save Function
   const saveStudent = async () => {
     try {
-      const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-      const teacherClass = userDoc.data()?.assignedClass || "Unknown";
+      if (!auth.currentUser) return alert("Please log in first.");
 
       await addDoc(collection(db, "students"), {
         ...formData,
-        class: teacherClass,
+        riskScore: result.score,
+        riskLabel: result.label,
         teacherId: auth.currentUser.uid,
+        school: userData?.school || "Unknown School",
+
+        // NEW: Critical field for District Official filtering
+        district: userData?.district || "Unassigned",
+
+        class: userData?.assignedClass || "Unknown",
         lastAnalyzed: new Date().toISOString()
       });
-      alert("Student saved to your database successfully!");
+
+      alert("Student saved and tagged to " + userData.district + " district!");
     } catch (err) {
       alert("Error saving student: " + err.message);
     }
@@ -70,7 +75,6 @@ const EarlyWarning = () => {
       setAnalyzedName(formData.name);
       let riskScore = 0;
 
-      // Your Original Weighted Logic
       if (parseFloat(formData.attendance) < 75) riskScore += 25;
       if (parseFloat(formData.gpa) < 5.0) riskScore += 15;
       if (parseInt(formData.arrears) >= 2) riskScore += 15;
@@ -85,7 +89,7 @@ const EarlyWarning = () => {
     }, 800);
   };
 
-  // --- YOUR ORIGINAL PDF LOGIC (STAYED EXACTLY THE SAME) ---
+  // PDF LOGIC REMAINS UNCHANGED
   const downloadReport = () => {
     const doc = new jsPDF();
     const startX = 20;
@@ -134,17 +138,17 @@ const EarlyWarning = () => {
 
   return (
       <div className="p-8 max-w-6xl mx-auto bg-white shadow-xl rounded-2xl mt-10">
-        <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center border-b pb-4">New Education Era: Dropout Predictor</h2>
+        <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center border-b pb-4">Early Warning System</h2>
 
-        {/* 4. NEW: Mode Toggle */}
+        {/* Mode Toggle */}
         <div className="flex justify-center gap-4 mb-8">
           <button onClick={() => setInputMode("manual")} className={`px-6 py-2 rounded-full font-bold transition-all ${inputMode === 'manual' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>Manual Entry</button>
-          <button onClick={() => setInputMode("database")} className={`px-6 py-2 rounded-full font-bold transition-all ${inputMode === 'database' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>Load from Database</button>
+          <button onClick={() => setInputMode("database")} className={`px-6 py-2 rounded-full font-bold transition-all ${inputMode === 'database' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>Load from Class</button>
         </div>
 
         {inputMode === "database" && (
             <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <label className="block text-sm font-bold text-blue-800 mb-2 text-center">Select Student from your Class</label>
+              <label className="block text-sm font-bold text-blue-800 mb-2 text-center">Select Student</label>
               <select onChange={handleStudentSelect} className="w-full p-2 border rounded text-center">
                 <option value="">-- Choose Student --</option>
                 {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -153,7 +157,7 @@ const EarlyWarning = () => {
         )}
 
         <form onSubmit={handlePredict} className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* YOUR ORIGINAL FORM BLOCKS (STAYED SAME) */}
+          {/* Form fields remain the same */}
           <div className="space-y-4 bg-blue-50 p-5 rounded-xl border border-blue-100">
             <h3 className="font-bold text-blue-800 text-lg">Academic Profile</h3>
             <input type="text" placeholder="Student Name" value={formData.name} required className="w-full p-2 border rounded" onChange={(e) => setFormData({...formData, name: e.target.value})} />
@@ -200,7 +204,7 @@ const EarlyWarning = () => {
           </div>
 
           <button type="submit" disabled={isAnalyzing} className={`md:col-span-3 py-4 rounded-xl font-bold text-white shadow-lg transition-all ${isAnalyzing ? 'bg-gray-400' : 'bg-blue-700 hover:bg-blue-800'}`}>
-            {isAnalyzing ? "Processing 11 Risk Factors..." : "Generate Risk Prediction Report"}
+            {isAnalyzing ? "Processing Risk Factors..." : "Analyze Dropout Risk"}
           </button>
         </form>
 
@@ -211,9 +215,7 @@ const EarlyWarning = () => {
               </h3>
               <div className="flex justify-center gap-4 mt-6">
                 <button onClick={downloadReport} className="bg-green-600 text-white px-10 py-3 rounded-full font-bold hover:bg-green-700 shadow-md">Download PDF Report</button>
-                {inputMode === "manual" && (
-                    <button onClick={saveStudent} className="bg-blue-600 text-white px-10 py-3 rounded-full font-bold hover:bg-blue-700 shadow-md underline decoration-white">Save to Database</button>
-                )}
+                <button onClick={saveStudent} className="bg-blue-600 text-white px-10 py-3 rounded-full font-bold hover:bg-blue-700 shadow-md">Save Result to DB</button>
               </div>
             </div>
         )}

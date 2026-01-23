@@ -45,7 +45,7 @@ import DropoutAnalytics from './pages/DropoutAnalytics';
 import StudentMonitoring from './pages/StudentMonitoring';
 import HeadmasterDashboard from "./pages/HeadmasterDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
-
+import DistrictDashboard from "./pages/DistrictDashboard";
 
 
 
@@ -104,6 +104,7 @@ function App() {
             <Route path="/student-monitoring" element={<StudentMonitoring />} />
             <Route path="/contact" element={<Contact role="Contact Us" />} />
             <Route path="/headmaster/dashboard" element={<HeadmasterDashboard />} />
+            <Route path="/district_official/dashboard" element={<DistrictDashboard />} />
           </Routes>
           <ChatBox />
         </div>
