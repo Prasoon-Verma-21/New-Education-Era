@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import PropTypes from 'prop-types'; // FIX 1: ADDED THIS
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import EarlyWarning from './pages/EarlyWarning';
@@ -45,19 +44,12 @@ import Contact from './pages/Contact';
 import DropoutAnalytics from './pages/DropoutAnalytics';
 import StudentMonitoring from './pages/StudentMonitoring';
 import HeadmasterDashboard from "./pages/HeadmasterDashboard";
+import TeacherDashboard from "./pages/TeacherDashboard";
 
-// FIX 2: Added PropTypes to the placeholder
-const DashboardPlaceholder = ({ role }) => (
-    <div className="p-10 text-center pt-24">
-      <h1 className="text-3xl font-bold text-blue-600 capitalize">{role} Dashboard</h1>
-      <p className="mt-4 text-gray-600">Welcome to the New Education Era portal. Your specialized tools are being initialized for Review 2.</p>
-      <button onClick={() => window.location.href='/'} className="mt-6 bg-blue-500 text-white px-4 py-2 rounded">Back to Home</button>
-    </div>
-);
 
-DashboardPlaceholder.propTypes = {
-  role: PropTypes.string.isRequired
-};
+
+
+
 
 function App() {
   return (
@@ -107,7 +99,7 @@ function App() {
             <Route path="/signup" element={<LoginSignupModal />} />
             <Route path="/complaint" element={<ProtectedRoute><StudentGrievanceForm /></ProtectedRoute>} />
             <Route path="/signin" element={<LoginSignupModal />} />
-            <Route path="/teacher/dashboard" element={<DashboardPlaceholder role="Teacher" />} />
+            <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
             <Route path="/dropout-analytics" element={<DropoutAnalytics />} />
             <Route path="/student-monitoring" element={<StudentMonitoring />} />
             <Route path="/contact" element={<Contact role="Contact Us" />} />

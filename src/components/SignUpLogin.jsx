@@ -203,8 +203,7 @@ const LoginSignupModal = () => {
                           </select>
                         </>
                     )}
-
-
+                    {/* Updated: School Selection for both Teacher and Headmaster */}
                     {userType === "teacher" && (
                         <div className="col-span-2">
                           <label className="block text-sm font-bold text-blue-600 mb-1">Select Your Assigned Class</label>
@@ -221,22 +220,28 @@ const LoginSignupModal = () => {
                           </select>
                         </div>
                     )}
-                    {userType === "headmaster" && (
+
+                    {(userType === "teacher" || userType === "headmaster") && (
                         <div className="col-span-2">
-                          <label className="block text-sm font-bold text-blue-600 mb-1">Affiliated School Name</label>
+                          <label className="block text-sm font-bold text-blue-600 mb-1">
+                            {userType === "teacher" ? "Affiliated School" : "Your School Name"}
+                          </label>
                           <select
                               name="school"
                               onChange={handleChange}
                               className="w-full p-2 border border-blue-500 rounded bg-blue-50 font-semibold"
                               required
                           >
-                            <option value="">-- Select Your School --</option>
+                            <option value="">-- Select School --</option>
                             <option value="Govt High School">Govt High School</option>
-                            <option value="City Public School">City Public School</option>
-                            <option value="Modern Academy">Modern Academy</option>
+                            <option value="Delhi Public School">Delhi Public School</option>
+                            <option value="Central Academy">Central Academy</option>
                           </select>
                         </div>
                     )}
+
+
+
                   </div>
               ) : (
                   <div className="flex flex-col gap-4 mb-4">

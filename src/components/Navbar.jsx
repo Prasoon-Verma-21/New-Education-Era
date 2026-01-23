@@ -11,6 +11,7 @@ const Navbar = () => {
   const [userData, setUserData] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const [showDropdown, setShowDropdown] = useState(false); // State to toggle menu
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -27,22 +28,21 @@ const Navbar = () => {
   }, [setIsLoggedIn]);
 
   const handleLogout = async () => {
+    setShowDropdown(false);
     await signOut(auth);
     navigate("/signin");
   };
 
   // ROBUST PATH MATCHING LOGIC
   const getLinkStyle = (path) => {
-    // Normalize both paths by removing trailing slashes and making lowercase
     const normalizedCurrent = location.pathname.replace(/\/$/, "").toLowerCase() || "/";
     const normalizedPath = path.replace(/\/$/, "").toLowerCase() || "/";
-
     const isActive = normalizedCurrent === normalizedPath;
 
     const baseClasses = "px-3 py-1.5 rounded-md transition-all whitespace-nowrap text-xs lg:text-sm font-bold tracking-tight";
 
     return isActive
-        ? `${baseClasses} bg-blue-600 text-white shadow-lg ring-1 ring-blue-400` // High contrast "Blue Box"
+        ? `${baseClasses} bg-blue-600 text-white shadow-lg ring-1 ring-blue-400`
         : `${baseClasses} text-gray-600 hover:text-blue-600 hover:bg-blue-50`;
   };
 
@@ -55,7 +55,7 @@ const Navbar = () => {
           <span className="text-lg font-bold text-gray-800 hidden sm:block">New Education Era</span>
         </div>
 
-        {/* 2. CENTER LINKS */}
+        {/* 2. CENTER LINKS (Cleaned up) */}
         <div className="flex items-center gap-1 lg:gap-2 flex-grow justify-center">
           <Link to="/" className={getLinkStyle("/")}>Home</Link>
           <Link to="/about" className={getLinkStyle("/about")}>About</Link>
@@ -69,47 +69,66 @@ const Navbar = () => {
               </>
           )}
         </div>
-        {/* Conditional Links based on Role */}
-        {isLoggedIn && (
-            <>
-              {userData?.role === "headmaster" && (
-                  <Link to="/headmaster/dashboard" className="text-gray-700 hover:text-blue-600 font-bold">
-                    School Analytics
-                  </Link>
-              )}
 
-              {userData?.role === "district_official" && (
-                  <Link to="/official/dashboard" className="text-gray-700 hover:text-blue-600 font-bold">
-                    District Overview
-                  </Link>
-              )}
-
-              {userData?.role === "teacher" && (
-                  <Link to="/teacher/dashboard" className="text-gray-700 hover:text-blue-600 font-bold">
-                    Class Monitor
-                  </Link>
-              )}
-            </>
-        )}
-
-        {/* 3. PROFILE SECTION */}
-        <div className="flex items-center gap-3 flex-shrink-0 border-l pl-3 ml-2">
+        {/* 3. PROFILE SECTION WITH DROPDOWN */}
+        <div className="flex items-center gap-3 flex-shrink-0 border-l pl-3 ml-2 relative">
           {isLoggedIn && userData ? (
-              <div className="flex items-center gap-2">
+              <div
+                  className="flex items-center gap-2 cursor-pointer group"
+                  onClick={() => setShowDropdown(!showDropdown)}
+              >
                 <div className="text-right hidden md:block">
-                  <p className="text-blue-600 font-extrabold text-[11px] leading-none uppercase">
+                  {/* Shows school name if they are a headmaster */}
+                  {userData.school && (
+                      <p className="text-[9px] font-bold text-blue-500 uppercase leading-none mb-0.5">
+                        {userData.school}
+                      </p>
+                  )}
+                  <p className="text-gray-800 font-extrabold text-[11px] leading-none uppercase group-hover:text-blue-600">
                     {userData.username || userData.name}
                   </p>
                   <p className="text-[9px] uppercase text-gray-400 font-bold">
                     ({userData.role})
                   </p>
                 </div>
-                <button onClick={handleLogout} className="bg-red-500 text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-red-600 shadow-sm transition-all">
-                  Logout
-                </button>
+
+                {/* Dropdown Arrow */}
+                <svg
+                    className={`w-3 h-3 text-gray-400 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
+                </svg>
+
+                {/* The Actual Dropdown Menu */}
+                {showDropdown && (
+                    <div className="absolute right-0 top-12 w-48 bg-white border border-gray-100 shadow-2xl rounded-xl py-2 z-50 animate-in fade-in zoom-in duration-150">
+                      <div className="px-4 py-2 border-b border-gray-50 mb-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">Account Menu</p>
+                      </div>
+
+                      {/* Dashboard Link based on Role */}
+                      <Link
+                          to={userData.role === 'headmaster' ? '/headmaster/dashboard' : `/${userData.role}/dashboard`}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-bold"
+                          onClick={() => setShowDropdown(false)}
+                      >
+                        📊 View Dashboard
+                      </Link>
+
+                      <div className="border-t border-gray-100 my-1"></div>
+
+                      <button
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                )}
               </div>
           ) : (
-              <button onClick={() => navigate("/signin")} className="border-2 border-blue-600 text-blue-600 px-4 py-1 rounded-md text-xs font-bold hover:bg-blue-600 transition-all">
+              <button onClick={() => navigate("/signin")} className="border-2 border-blue-600 text-blue-600 px-4 py-1 rounded-md text-xs font-bold hover:bg-blue-600 hover:text-white transition-all">
                 Sign In
               </button>
           )}
