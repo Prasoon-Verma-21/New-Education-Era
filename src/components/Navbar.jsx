@@ -69,6 +69,28 @@ const Navbar = () => {
               </>
           )}
         </div>
+        {/* Conditional Links based on Role */}
+        {isLoggedIn && (
+            <>
+              {userData?.role === "headmaster" && (
+                  <Link to="/headmaster/dashboard" className="text-gray-700 hover:text-blue-600 font-bold">
+                    School Analytics
+                  </Link>
+              )}
+
+              {userData?.role === "district_official" && (
+                  <Link to="/official/dashboard" className="text-gray-700 hover:text-blue-600 font-bold">
+                    District Overview
+                  </Link>
+              )}
+
+              {userData?.role === "teacher" && (
+                  <Link to="/teacher/dashboard" className="text-gray-700 hover:text-blue-600 font-bold">
+                    Class Monitor
+                  </Link>
+              )}
+            </>
+        )}
 
         {/* 3. PROFILE SECTION */}
         <div className="flex items-center gap-3 flex-shrink-0 border-l pl-3 ml-2">

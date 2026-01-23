@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { auth, db } from "../firebase"; // Ensure this path is correct
+import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
@@ -18,10 +18,10 @@ const LoginSignupModal = () => {
   const { setIsLoggedIn } = useAuth();
   const navigate = useNavigate();
 
-  // Unified data states
+
   const [loginData, setLoginData] = useState({ email: "", password: "" });
 
-  // UPDATED: Added assignedClass to formData
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -39,19 +39,22 @@ const LoginSignupModal = () => {
   const [adminData, setAdminData] = useState({ name: "", username: "", email: "", password: "", school: "", phone: "" });
   const [subAdminData, setSubAdminData] = useState({ name: "", username: "", email: "", password: "", school: "", Class: "", phone: "" });
 
-  // Input Handlers
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // Handles both students and teachers using formData
-    if (userType === "student" || userType === "teacher") {
-      setFormData({ ...formData, [name]: value });
+    // List all roles that use the standard 'formData' state
+    const standardRoles = ["student", "teacher", "headmaster", "district_official", "subadmin"];
+
+    if (standardRoles.includes(userType)) {
+      setFormData((prev) => ({ ...prev, [name]: value })); // Using functional update for reliability
     }
-    else if (userType === "expert") setExpertData({ ...expertData, [name]: value });
-    else if (userType === "tutor") setTutorData({ ...tutorData, [name]: value });
-    else if (userType === "parent") setParentData({ ...parentData, [name]: value });
-    else if (userType === "admin") setAdminData({ ...adminData, [name]: value });
-    else if (userType === "subadmin") setSubAdminData({ ...subAdminData, [name]: value });
+    else if (userType === "expert") setExpertData((prev) => ({ ...prev, [name]: value }));
+    else if (userType === "tutor") setTutorData((prev) => ({ ...prev, [name]: value }));
+    else if (userType === "parent") setParentData((prev) => ({ ...prev, [name]: value }));
+    else if (userType === "admin") setAdminData((prev) => ({ ...prev, [name]: value }));
+    else if (userType === "subadmin") setSubAdminData((prev) => ({ ...prev, [name]: value }));
+
     setErrorMessage("");
   };
 
@@ -60,7 +63,7 @@ const LoginSignupModal = () => {
     setLoginData({ ...loginData, [name]: value });
   };
 
-  // --- BACKEND LOGIC ---
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -92,42 +95,58 @@ const LoginSignupModal = () => {
   const handleSignUp = async (e) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      let selectedData;
-      if (userType === "student") selectedData = formData;
-      else if (userType === "teacher") selectedData = formData;
-      else if (userType === "expert") selectedData = expertData;
-      else if (userType === "tutor") selectedData = tutorData;
-      else if (userType === "parent") selectedData = parentData;
-      else if (userType === "admin") selectedData = adminData;
-      else if (userType === "subadmin") selectedData = subAdminData;
+    setErrorMessage(""); // Clear previous errors
 
+    try {
+      // 1. IMPROVED MAPPING: Determine which data object to use
+      let selectedData;
+
+      // All these roles use the 'formData' state
+      const usesFormData = ["student", "teacher", "headmaster", "district_official", "subadmin"];
+
+      if (usesFormData.includes(userType)) {
+        selectedData = formData;
+      } else if (userType === "expert") {
+        selectedData = expertData;
+      } else if (userType === "tutor") {
+        selectedData = tutorData;
+      } else if (userType === "parent") {
+        selectedData = parentData;
+      } else if (userType === "admin") {
+        selectedData = adminData;
+      }
+
+      // 2. Critical Check
       if (!selectedData || !selectedData.email) {
-        throw new Error("Data mapping failed. Please ensure all fields are filled.");
+        console.log("Current userType:", userType); // Debugging
+        console.log("SelectedData content:", selectedData);
+        throw new Error(`Data mapping failed for role: ${userType}. Please check if email is entered.`);
       }
 
       const cleanEmail = selectedData.email.trim();
       const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, selectedData.password);
 
+      // 3. Prepare data for Firestore
       const dataToSave = { ...selectedData };
-      delete dataToSave.password; // Security
+      delete dataToSave.password; // Security: Don't store passwords
 
       await setDoc(doc(db, "users", userCredential.user.uid), {
         ...dataToSave,
-        role: userType,
+        role: userType, // This ensures the role is saved correctly
         createdAt: new Date().toISOString(),
       });
 
-      Swal.fire({ title: 'Success!', text: 'Account created!', icon: 'success' });
+      Swal.fire({ title: 'Success!', text: `Account created as ${userType}!`, icon: 'success' });
       setIsSignup(false);
     } catch (error) {
+      console.error("Signup Error:", error.message);
       setErrorMessage(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- FRONTEND RENDER ---
+
 
   return (
       <div className="bg-gradient-to-b from-gray-50 via-blue-100 to-white flex justify-evenly p-12 w-full">
@@ -159,6 +178,8 @@ const LoginSignupModal = () => {
                 >
                   <option value="student">Student</option>
                   <option value="teacher">Teacher</option>
+                  <option value="headmaster">Headmaster (Principal)</option>
+                  <option value="district_official">District Official</option>
                   <option value="expert">Expert</option>
                   <option value="tutor">Tutor</option>
                   <option value="parent">Parent</option>
@@ -183,7 +204,7 @@ const LoginSignupModal = () => {
                         </>
                     )}
 
-                    {/* NEW: Conditional Class Selection ONLY for Teachers */}
+
                     {userType === "teacher" && (
                         <div className="col-span-2">
                           <label className="block text-sm font-bold text-blue-600 mb-1">Select Your Assigned Class</label>
@@ -197,6 +218,22 @@ const LoginSignupModal = () => {
                             {["9", "10", "11", "12"].map(c => (
                                 <option key={c} value={c}>Class {c}</option>
                             ))}
+                          </select>
+                        </div>
+                    )}
+                    {userType === "headmaster" && (
+                        <div className="col-span-2">
+                          <label className="block text-sm font-bold text-blue-600 mb-1">Affiliated School Name</label>
+                          <select
+                              name="school"
+                              onChange={handleChange}
+                              className="w-full p-2 border border-blue-500 rounded bg-blue-50 font-semibold"
+                              required
+                          >
+                            <option value="">-- Select Your School --</option>
+                            <option value="Govt High School">Govt High School</option>
+                            <option value="City Public School">City Public School</option>
+                            <option value="Modern Academy">Modern Academy</option>
                           </select>
                         </div>
                     )}

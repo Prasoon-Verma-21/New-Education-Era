@@ -44,6 +44,7 @@ import CoolegeWiseDropout from "./adminDashboard/admin/SchoolWiseDropout";
 import Contact from './pages/Contact';
 import DropoutAnalytics from './pages/DropoutAnalytics';
 import StudentMonitoring from './pages/StudentMonitoring';
+import HeadmasterDashboard from "./pages/HeadmasterDashboard";
 
 // FIX 2: Added PropTypes to the placeholder
 const DashboardPlaceholder = ({ role }) => (
@@ -107,17 +108,10 @@ function App() {
             <Route path="/complaint" element={<ProtectedRoute><StudentGrievanceForm /></ProtectedRoute>} />
             <Route path="/signin" element={<LoginSignupModal />} />
             <Route path="/teacher/dashboard" element={<DashboardPlaceholder role="Teacher" />} />
-            <Route path="/dropout-analytics" element={
-
-                <DropoutAnalytics />
-
-            } />
-            <Route path="/student-monitoring" element={
-
-                <StudentMonitoring />
-
-            } />
+            <Route path="/dropout-analytics" element={<DropoutAnalytics />} />
+            <Route path="/student-monitoring" element={<StudentMonitoring />} />
             <Route path="/contact" element={<Contact role="Contact Us" />} />
+            <Route path="/headmaster/dashboard" element={<HeadmasterDashboard />} />
           </Routes>
           <ChatBox />
         </div>
