@@ -33,6 +33,7 @@
     "react-simple-chatbot": "^0.5.0",
     "react-slick": "^0.30.2",
     "react-toastify": "^10.0.6",
+    "recharts": "^3.7.0",
     "slick-carousel": "^1.8.1",
     "sweetalert": "^2.1.2",
     "sweetalert2": "^11.14.5",
