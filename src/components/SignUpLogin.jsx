@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import loginImage from '../assets/login.jpg';
 import signupImage from '../assets/signup.jpg';
 import Swal from "sweetalert2";
+import { signOut } from "firebase/auth";
 
 const LoginSignupModal = () => {
   const [isSignup, setIsSignup] = useState(false);
@@ -54,6 +55,7 @@ const LoginSignupModal = () => {
     setLoginData({ ...loginData, [name]: value });
   };
 
+  // --- UPDATED LOGIN LOGIC ---
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -63,22 +65,29 @@ const LoginSignupModal = () => {
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
+
+        // FIXED: Role Enforcement with immediate Sign-Out
         if (userData.role !== userType) {
-          throw new Error(`Role mismatch! You are a ${userData.role}, not a ${userType}.`);
+          await signOut(auth); // KILL THE SESSION IMMEDIATELY
+          setIsLoggedIn(false); // Reset context state
+          throw new Error(`SECURITY ALERT: You are registered as a ${userData.role.toUpperCase()}. Access denied for ${userType} role.`);
         }
+
+        // If roles match, proceed as normal
         setIsLoggedIn(true);
-        const targetPath = userData.role === 'admin' ? '/admin' : `/${userData.role}/dashboard`;
+        const targetPath = userData.role === 'admin' ? '/admin' : `/${userData.role}-dashboard`;
         navigate(targetPath);
-      } else {
-        setErrorMessage("No user profile found!");
       }
     } catch (error) {
       setErrorMessage(error.message);
+      // Safety fallback: ensure they are logged out if any error occurs during role check
+      await signOut(auth);
     } finally {
       setLoading(false);
     }
   };
 
+  // --- UPDATED SIGNUP LOGIC ---
   const handleSignUp = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -86,42 +95,51 @@ const LoginSignupModal = () => {
 
     try {
       let selectedData;
-      const usesFormData = ["student", "teacher", "headmaster", "district_official", "subadmin"];
+      const usesFormData = ["student", "teacher", "headmaster", "district_official", "subadmin", "parent"];
 
+      // Select which data object to use based on role
       if (usesFormData.includes(userType)) {
         selectedData = formData;
-      } else if (userType === "expert") {
-        selectedData = expertData;
-      } else if (userType === "tutor") {
-        selectedData = tutorData;
-      } else if (userType === "parent") {
-        selectedData = parentData;
-      } else if (userType === "admin") {
-        selectedData = adminData;
+      } else {
+        // Fallback for experts/tutors/admins if you use those states
+        selectedData = userType === "expert" ? expertData : userType === "tutor" ? tutorData : adminData;
       }
 
       if (!selectedData || !selectedData.email) {
         throw new Error(`Signup data incomplete. Please check all fields.`);
       }
 
+      // 1. Create User in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, selectedData.email.trim(), selectedData.password);
 
-      const dataToSave = { ...selectedData };
-      delete dataToSave.password;
+      // 2. Prepare Data for Firestore
+      const dataToSave = {
+        ...selectedData,
+        name: selectedData.username || selectedData.name // Ensure 'name' field exists for Student Portal matching
+      };
+      delete dataToSave.password; // Security: Never save passwords in Firestore
 
-      // Automatically tag with district before saving
-      if (userType === "teacher" || userType === "headmaster") {
+      // 3. Automated Tagging for the "Firewall"
+      // If they are a student or teacher, we MUST tag them with a district based on their school
+      if (["teacher", "headmaster", "student", "parent"].includes(userType)) {
         dataToSave.district = SCHOOL_DISTRICT_MAP[selectedData.school] || "Other";
       }
 
+      // 4. Save to Firestore
       await setDoc(doc(db, "users", userCredential.user.uid), {
         ...dataToSave,
         role: userType,
         createdAt: new Date().toISOString(),
       });
 
-      Swal.fire({ title: 'Success!', text: `Account created as ${userType}!`, icon: 'success' });
-      setIsSignup(false);
+      Swal.fire({
+        title: 'Account Created!',
+        text: `You can now login as a ${userType}.`,
+        icon: 'success',
+        confirmButtonColor: '#2563eb'
+      });
+
+      setIsSignup(false); // Switch to login view
     } catch (error) {
       setErrorMessage(error.message);
     } finally {
@@ -203,6 +221,16 @@ const LoginSignupModal = () => {
                           <option value="Lucknow">Lucknow Oversight</option>
                           <option value="Varanasi">Varanasi Oversight</option>
                           <option value="Kanpur">Kanpur Oversight</option>
+                        </select>
+                      </div>
+                  )}
+                  {/* Add this inside the isSignup block for students */}
+                  {userType === "student" && (
+                      <div className="col-span-2">
+                        <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 ml-2 text-center">Select Your School</label>
+                        <select name="school" onChange={handleChange} className="w-full p-3 border-2 border-blue-50 rounded-2xl font-bold bg-blue-50/50" required>
+                          <option value="">-- Which school do you attend? --</option>
+                          {Object.keys(SCHOOL_DISTRICT_MAP).map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
                   )}

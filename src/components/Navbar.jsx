@@ -109,12 +109,14 @@ const Navbar = () => {
 
                       {/* Dashboard Link based on Role */}
                       <Link
-                          to={userData.role === 'headmaster' ? '/headmaster/dashboard' : `/${userData.role}/dashboard`}
+                          to={`/${userData?.role}-dashboard`}
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 font-bold"
                           onClick={() => setShowDropdown(false)}
                       >
                         📊 View Dashboard
                       </Link>
+
+
 
                       <div className="border-t border-gray-100 my-1"></div>
 

@@ -46,6 +46,9 @@ import StudentMonitoring from './pages/StudentMonitoring';
 import HeadmasterDashboard from "./pages/HeadmasterDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import DistrictDashboard from "./pages/DistrictDashboard";
+import StudentPortal from "./components/StudentPortal";
+
+
 
 
 
@@ -105,6 +108,8 @@ function App() {
             <Route path="/contact" element={<Contact role="Contact Us" />} />
             <Route path="/headmaster/dashboard" element={<HeadmasterDashboard />} />
             <Route path="/district_official/dashboard" element={<DistrictDashboard />} />
+            <Route path="/student-dashboard" element={<StudentPortal />} />
+            <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
           </Routes>
           <ChatBox />
         </div>
