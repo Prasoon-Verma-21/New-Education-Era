@@ -3,7 +3,7 @@ import user from "../assets/Expert1.jpg";
 import StudentAttendanceGraph from "./AttendaceChart";
 import axios from "axios";
 import axiosInstance from "../axiosConfig";
-import studentimg from '../../public/self-growth.png'
+import studentimg from '../assets/self-growth.png'
 import { ArrowBigRight, Award, BookOpenText, CircleArrowRight, CircleUser, LibraryBig, ListOrdered, School } from "lucide-react";
 import AttendanceTrendChart from "./AttendanceTrendChart";
 

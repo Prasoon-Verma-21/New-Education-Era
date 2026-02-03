@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'; // Removed 'React' to fix no-unused-vars
+import { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import { db, auth } from "../firebase";
-import { doc, getDoc, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, doc, updateDoc } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
 const EarlyWarning = () => {
-  const { isLoggedIn, userData } = useAuth(); // Destructure userData here at the TOP
+  const { isLoggedIn, userData } = useAuth();
   const [inputMode, setInputMode] = useState("manual");
   const [students, setStudents] = useState([]);
   const [formData, setFormData] = useState({
@@ -17,50 +17,64 @@ const EarlyWarning = () => {
   const [result, setResult] = useState({ label: '', score: 0 });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzedName, setAnalyzedName] = useState('');
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
 
+  // FIXED: The "Firewall" query now filters by BOTH Class and School
   useEffect(() => {
-    const fetchStudents = async () => {
-      if (auth.currentUser) {
-        const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-        if (userDoc.exists()) {
-          const teacherClass = userDoc.data().assignedClass;
-          const q = query(collection(db, "students"), where("class", "==", teacherClass));
-          const querySnapshot = await getDocs(q);
-          setStudents(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        }
+    const fetchFilteredStudents = async () => {
+      if (!isLoggedIn || !userData?.school || !userData?.assignedClass) return;
+
+      try {
+        const q = query(
+            collection(db, "students"),
+            where("school", "==", userData.school),
+            where("class", "==", userData.assignedClass)
+        );
+
+        const querySnapshot = await getDocs(q);
+        setStudents(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error("Error fetching class-specific students:", err);
       }
     };
-    if (inputMode === "database") fetchStudents();
-  }, [inputMode, isLoggedIn]);
+
+    if (inputMode === "database") fetchFilteredStudents();
+  }, [inputMode, isLoggedIn, userData]);
 
   const handleStudentSelect = (e) => {
     const student = students.find(s => s.id === e.target.value);
     if (student) {
       setFormData({ ...student });
       setAnalyzedName(student.name);
+      setSelectedStudentId(student.id);
     }
   };
 
-  // 1. Unified Save Function
+  // 1. Unified Save/Update Function
   const saveStudent = async () => {
     try {
       if (!auth.currentUser) return alert("Please log in first.");
 
-      await addDoc(collection(db, "students"), {
+      const payload = {
         ...formData,
         riskScore: result.score,
         riskLabel: result.label,
         teacherId: auth.currentUser.uid,
-        school: userData?.school || "Unknown School",
-
-        // NEW: Critical field for District Official filtering
-        district: userData?.district || "Unassigned",
-
-        class: userData?.assignedClass || "Unknown",
+        school: userData?.school,
+        district: userData?.district,
+        class: userData?.assignedClass,
         lastAnalyzed: new Date().toISOString()
-      });
+      };
 
-      alert("Student saved and tagged to " + userData.district + " district!");
+      if (inputMode === "database" && selectedStudentId) {
+        // Update existing record
+        await updateDoc(doc(db, "students", selectedStudentId), payload);
+        alert("Student assessment updated successfully!");
+      } else {
+        // Create new record
+        await addDoc(collection(db, "students"), payload);
+        alert(`Student saved and tagged to ${userData.school} (${userData.district})!`);
+      }
     } catch (err) {
       alert("Error saving student: " + err.message);
     }
@@ -89,7 +103,6 @@ const EarlyWarning = () => {
     }, 800);
   };
 
-  // PDF LOGIC REMAINS UNCHANGED
   const downloadReport = () => {
     const doc = new jsPDF();
     const startX = 20;
@@ -142,7 +155,7 @@ const EarlyWarning = () => {
 
         {/* Mode Toggle */}
         <div className="flex justify-center gap-4 mb-8">
-          <button onClick={() => setInputMode("manual")} className={`px-6 py-2 rounded-full font-bold transition-all ${inputMode === 'manual' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>Manual Entry</button>
+          <button onClick={() => {setInputMode("manual"); setSelectedStudentId(null); setResult({label: '', score: 0});}} className={`px-6 py-2 rounded-full font-bold transition-all ${inputMode === 'manual' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>Manual Entry</button>
           <button onClick={() => setInputMode("database")} className={`px-6 py-2 rounded-full font-bold transition-all ${inputMode === 'database' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>Load from Class</button>
         </div>
 
@@ -157,7 +170,6 @@ const EarlyWarning = () => {
         )}
 
         <form onSubmit={handlePredict} className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Form fields remain the same */}
           <div className="space-y-4 bg-blue-50 p-5 rounded-xl border border-blue-100">
             <h3 className="font-bold text-blue-800 text-lg">Academic Profile</h3>
             <input type="text" placeholder="Student Name" value={formData.name} required className="w-full p-2 border rounded" onChange={(e) => setFormData({...formData, name: e.target.value})} />
@@ -215,7 +227,9 @@ const EarlyWarning = () => {
               </h3>
               <div className="flex justify-center gap-4 mt-6">
                 <button onClick={downloadReport} className="bg-green-600 text-white px-10 py-3 rounded-full font-bold hover:bg-green-700 shadow-md">Download PDF Report</button>
-                <button onClick={saveStudent} className="bg-blue-600 text-white px-10 py-3 rounded-full font-bold hover:bg-blue-700 shadow-md">Save Result to DB</button>
+                <button onClick={saveStudent} className="bg-blue-600 text-white px-10 py-3 rounded-full font-bold hover:bg-blue-700 shadow-md">
+                  {inputMode === "database" ? "Update Result in DB" : "Save Result to DB"}
+                </button>
               </div>
             </div>
         )}
