@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import EarlyWarning from './pages/EarlyWarning';
@@ -47,74 +47,88 @@ import HeadmasterDashboard from "./pages/HeadmasterDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import DistrictDashboard from "./pages/DistrictDashboard";
 import StudentPortal from "./components/StudentPortal";
-
-
-
-
-
-
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
       <Router>
+        <Toaster position="top-right" reverseOrder={false} />
+        <div className="overflow-hidden"><Navbar /></div>
         <div className="overflow-hidden"><Navbar /></div>
         <div className="mt-16 bg-gray-50 overflow-auto min-h-screen">
-
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/early-warning" element={
+            <Route path="/about" element={<About /> } />
+            <Route path="/contact" element={<Contact role="Contact Us" />} />
+            <Route path="/signin" element={<LoginSignupModal />} />
+            <Route path="/signup" element={<LoginSignupModal />} />
 
-                <EarlyWarning />
+            {/* --- Teacher & Admin Monitoring Routes --- */}
+            <Route path="/early-warning" element={<ProtectedRoute><EarlyWarning /></ProtectedRoute>} />
+            <Route path="/dropout-analytics" element={<ProtectedRoute><DropoutAnalytics /></ProtectedRoute>} />
+            <Route path="/student-monitoring" element={<ProtectedRoute><StudentMonitoring /></ProtectedRoute>} />
 
-            } />
+            {/* --- Learning Hub Section --- */}
             <Route path="/learning-hub" element={<ProtectedRoute><LearningHub /></ProtectedRoute>}/>
-            <Route path="/financial-support" element={<ProtectedRoute><FinancialSupport /></ProtectedRoute>} />
-            <Route path="/parental-engagement" element={<ProtectedRoute><ParentPortal /></ProtectedRoute>} />
             <Route path='/learning-hub/online-consultation' element={<ProtectedRoute><OnlineConsultation /></ProtectedRoute>} />
             <Route path='/learning-hub/resource-library' element={<ProtectedRoute><ResourceLibrary /></ProtectedRoute>} />
             <Route path='/learning-hub/virtual-tutoring' element={<ProtectedRoute><VirtualTutoring /></ProtectedRoute>} />
             <Route path='/learning-hub/community-forums' element={<ProtectedRoute><CommunityForums /></ProtectedRoute>} />
             <Route path='/learning-hub/community-forums/:forumName' element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
             <Route path='/learning-hub/virtual-tutoring/booking' element={<ProtectedRoute><BookingConfirmation /></ProtectedRoute>} />
+
+            {/* --- Financial Support Section --- */}
+            <Route path="/financial-support" element={<ProtectedRoute><FinancialSupport /></ProtectedRoute>} />
             <Route path='/financial-support/scholarships' element={<ProtectedRoute><Scholarships /></ProtectedRoute>} />
             <Route path='/financial-support/grants' element={<ProtectedRoute><Grants /></ProtectedRoute>} />
             <Route path='/financial-support/loans' element={<ProtectedRoute><Loans /></ProtectedRoute>} />
             <Route path='/financial-support/faq' element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
+
+            {/* --- Parental Engagement Section --- */}
+            <Route path="/parental-engagement" element={<ProtectedRoute><ParentPortal /></ProtectedRoute>} />
             <Route path="/parental-engagement/resources" element={<ProtectedRoute><ParentingResources /></ProtectedRoute>} />
             <Route path="/parental-engagement/communication" element={<ProtectedRoute><CommunicationTips /></ProtectedRoute>} />
             <Route path="/parental-engagement/events" element={<ProtectedRoute><UpcomingEvents /></ProtectedRoute>} />
             <Route path="/parental-engagement/faq" element={<ProtectedRoute><ParentingFAQs /></ProtectedRoute>} />
+
+            {/* --- Schooling & Progress Section --- */}
             <Route path="/flexible-schooling" element={<ProtectedRoute><SchoolingManagement /></ProtectedRoute>} />
             <Route path="/schooling/courses" element={<ProtectedRoute><CombinedPage /></ProtectedRoute>} />
             <Route path="/schooling/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
             <Route path="/schooling/studentSchedule" element={<ProtectedRoute><CalendarView /></ProtectedRoute>} />
-            <Route path="/about" element={<About /> } />
-            <Route path="/student/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
+
+            {/* --- Role-Based Dashboards (Hyphenated for consistency) --- */}
+            <Route path="/student-dashboard" element={<ProtectedRoute role="student"><StudentPortal /></ProtectedRoute>} />
+            <Route path="/teacher-dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
+
+            <Route path="/headmaster-dashboard" element={<ProtectedRoute role="headmaster"><HeadmasterDashboard /></ProtectedRoute>} />
+            <Route path="/district_official-dashboard" element={<ProtectedRoute role="district_official"><DistrictDashboard /></ProtectedRoute>} />
+            <Route path="/expert-dashboard" element={<ProtectedRoute role="expert"><ExpertDashboard /></ProtectedRoute>} />
+            <Route path="/tutor-dashboard" element={<ProtectedRoute role="tutor"><TutorDashboard /></ProtectedRoute>} />
+            <Route path="/parent-dashboard" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
+
             <Route path="/admin" element={<Admin />} />
+
+            {/* --- Miscellaneous Features --- */}
             <Route path="/reward" element={<ProtectedRoute><RewardSystem /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute><Store /></ProtectedRoute>} />
-            <Route path="/expert/dashboard" element={<ProtectedRoute><ExpertDashboard /></ProtectedRoute>} />
-            <Route path="/tutor/dashboard" element={<ProtectedRoute><TutorDashboard /></ProtectedRoute>} />
-            <Route path="/parent/dashboard" element={<ProtectedRoute><ParentDashboard /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><QRScanner /></ProtectedRoute>} />
+            <Route path="/complaint" element={<ProtectedRoute><StudentGrievanceForm /></ProtectedRoute>} />
             <Route path="/subadmin/student-details" element={<StudentAdminDashboard />} />
             <Route path="/admin/school-dropout" element={<CoolegeWiseDropout />} />
-            <Route path="/signup" element={<LoginSignupModal />} />
-            <Route path="/complaint" element={<ProtectedRoute><StudentGrievanceForm /></ProtectedRoute>} />
-            <Route path="/signin" element={<LoginSignupModal />} />
-            <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-            <Route path="/dropout-analytics" element={<DropoutAnalytics />} />
-            <Route path="/student-monitoring" element={<StudentMonitoring />} />
-            <Route path="/contact" element={<Contact role="Contact Us" />} />
-            <Route path="/headmaster/dashboard" element={<HeadmasterDashboard />} />
-            <Route path="/district_official/dashboard" element={<DistrictDashboard />} />
-            <Route path="/student-dashboard" element={<StudentPortal />} />
-            <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+
+            {/* --- Legacy/Redirects --- */}
+            <Route path="/student/dashboard" element={<Navigate to="/student-dashboard" />} />
+            <Route path="/teacher/dashboard" element={<Navigate to="/teacher-dashboard" />} />
+            <Route path="/parent-dashboard" element={<ParentDashboard />} />
+
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
           <ChatBox />
         </div>
         <Footer />
-
       </Router>
   );
 }

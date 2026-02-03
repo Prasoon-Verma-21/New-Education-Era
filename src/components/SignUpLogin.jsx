@@ -27,8 +27,15 @@ const LoginSignupModal = () => {
   };
 
   const [formData, setFormData] = useState({
-    username: "", email: "", password: "", phone: "",
-    school: "", Class: "", rollNo: "", assignedClass: "", district: ""
+    username: "",
+    email: "",
+    password: "",
+    phone: "",
+    school: "",
+    Class: "",
+    rollNo: "",
+    assignedClass: "",
+    district: ""
   });
 
   const [expertData, setExpertData] = useState({ username: "", email: "", password: "", phone: "", consultationField: "", experienceYears: "", description: "" });
@@ -38,7 +45,7 @@ const LoginSignupModal = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const standardRoles = ["student", "teacher", "headmaster", "district_official", "subadmin"];
+    const standardRoles = ["student", "teacher", "headmaster", "district_official", "subadmin", "parent"];
 
     if (standardRoles.includes(userType)) {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -66,21 +73,27 @@ const LoginSignupModal = () => {
       if (userDoc.exists()) {
         const userData = userDoc.data();
 
-        // FIXED: Role Enforcement with immediate Sign-Out
+        // 1. Role Security Check
         if (userData.role !== userType) {
-          await signOut(auth); // KILL THE SESSION IMMEDIATELY
-          setIsLoggedIn(false); // Reset context state
-          throw new Error(`SECURITY ALERT: You are registered as a ${userData.role.toUpperCase()}. Access denied for ${userType} role.`);
+          await signOut(auth);
+          setIsLoggedIn(false);
+          throw new Error(`Role Mismatch! You are registered as ${userData.role}.`);
         }
 
-        // If roles match, proceed as normal
         setIsLoggedIn(true);
+
+        // 2. THE REDIRECT LOGIC
+        // This ensures 'parent' goes to '/parent-dashboard'
         const targetPath = userData.role === 'admin' ? '/admin' : `/${userData.role}-dashboard`;
+
+        console.log("Redirecting to:", targetPath); // Debug line
         navigate(targetPath);
+
+      } else {
+        setErrorMessage("User profile not found!");
       }
     } catch (error) {
       setErrorMessage(error.message);
-      // Safety fallback: ensure they are logged out if any error occurs during role check
       await signOut(auth);
     } finally {
       setLoading(false);
@@ -95,9 +108,9 @@ const LoginSignupModal = () => {
 
     try {
       let selectedData;
+      // ADD "parent" TO THIS ARRAY TOO
       const usesFormData = ["student", "teacher", "headmaster", "district_official", "subadmin", "parent"];
 
-      // Select which data object to use based on role
       if (usesFormData.includes(userType)) {
         selectedData = formData;
       } else {
@@ -182,34 +195,9 @@ const LoginSignupModal = () => {
                   <input type="password" name="password" placeholder="Password" onChange={handleChange} className="p-3 border-2 border-blue-50 rounded-2xl outline-none focus:border-blue-500 font-semibold" required />
                   <input type="text" name="phone" placeholder="Contact Number" onChange={handleChange} className="p-3 border-2 border-blue-50 rounded-2xl outline-none focus:border-blue-500 font-semibold" required />
 
-                  {(userType === "teacher" || userType === "headmaster") && (
-                      <div className="col-span-2 space-y-4">
-                        <div className="flex gap-2 items-center">
-                          <div className="flex-grow">
-                            <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 ml-2">Assigned School</label>
-                            <select name="school" onChange={handleChange} className="w-full p-3 border-2 border-blue-50 rounded-2xl font-bold bg-blue-50/50" required>
-                              <option value="">-- Select Your School --</option>
-                              {Object.keys(SCHOOL_DISTRICT_MAP).map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
+                  {(userType === "teacher" || userType === "headmaster" || userType === "student" || userType === "parent") && (
+                      <div className="col-span-2">
 
-                          {/* NEW: Automated District Preview Box */}
-                          {formData.school && (
-                              <div className="w-32 animate-in slide-in-from-right duration-300">
-                                <label className="block text-[9px] font-black text-indigo-400 uppercase mb-1 ml-2">Jurisdiction</label>
-                                <div className="p-3 bg-indigo-600 text-white rounded-2xl font-black text-xs text-center shadow-lg shadow-indigo-100">
-                                  {SCHOOL_DISTRICT_MAP[formData.school].toUpperCase()}
-                                </div>
-                              </div>
-                          )}
-                        </div>
-
-                        {userType === "teacher" && (
-                            <select name="assignedClass" onChange={handleChange} className="w-full p-3 border-2 border-blue-50 rounded-2xl font-bold bg-blue-50/50" required>
-                              <option value="">-- Choose Assigned Class --</option>
-                              {["9", "10", "11", "12"].map(c => <option key={c} value={c}>Grade {c} Monitor</option>)}
-                            </select>
-                        )}
                       </div>
                   )}
 
@@ -229,7 +217,7 @@ const LoginSignupModal = () => {
                       <div className="col-span-2">
                         <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 ml-2 text-center">Select Your School</label>
                         <select name="school" onChange={handleChange} className="w-full p-3 border-2 border-blue-50 rounded-2xl font-bold bg-blue-50/50" required>
-                          <option value="">-- Which school do you attend? --</option>
+                          <option value="">-- Select School --</option>
                           {Object.keys(SCHOOL_DISTRICT_MAP).map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
