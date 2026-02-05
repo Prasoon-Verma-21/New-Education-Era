@@ -48,8 +48,13 @@ import TeacherDashboard from "./pages/TeacherDashboard";
 import DistrictDashboard from "./pages/DistrictDashboard";
 import StudentPortal from "./components/StudentPortal";
 import { Toaster } from 'react-hot-toast';
+import AdminDashboard from "./components/AdminDashboard";
+import { useAuth } from "./context/AuthContext";
+
 
 function App() {
+  const { isLoggedIn, loading } = useAuth();
+  if (loading) return null;
   return (
       <Router>
         <Toaster position="top-right" reverseOrder={false} />
@@ -100,14 +105,14 @@ function App() {
             {/* --- Role-Based Dashboards (Hyphenated for consistency) --- */}
             <Route path="/student-dashboard" element={<ProtectedRoute role="student"><StudentPortal /></ProtectedRoute>} />
             <Route path="/teacher-dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
-
             <Route path="/headmaster-dashboard" element={<ProtectedRoute role="headmaster"><HeadmasterDashboard /></ProtectedRoute>} />
             <Route path="/district_official-dashboard" element={<ProtectedRoute role="district_official"><DistrictDashboard /></ProtectedRoute>} />
             <Route path="/expert-dashboard" element={<ProtectedRoute role="expert"><ExpertDashboard /></ProtectedRoute>} />
             <Route path="/tutor-dashboard" element={<ProtectedRoute role="tutor"><TutorDashboard /></ProtectedRoute>} />
             <Route path="/parent-dashboard" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
-
+            <Route path="/admin-dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<Admin />} />
+
 
             {/* --- Miscellaneous Features --- */}
             <Route path="/reward" element={<ProtectedRoute><RewardSystem /></ProtectedRoute>} />
@@ -117,14 +122,18 @@ function App() {
             <Route path="/subadmin/student-details" element={<StudentAdminDashboard />} />
             <Route path="/admin/school-dropout" element={<CoolegeWiseDropout />} />
 
+
             {/* --- Legacy/Redirects --- */}
             <Route path="/student/dashboard" element={<Navigate to="/student-dashboard" />} />
             <Route path="/teacher/dashboard" element={<Navigate to="/teacher-dashboard" />} />
             <Route path="/parent-dashboard" element={<ParentDashboard />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+
 
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" />} />
+            <Route path="/admin/*" element={isLoggedIn ? <Admin /> : <Navigate to="/" replace />}/>
           </Routes>
           <ChatBox />
         </div>

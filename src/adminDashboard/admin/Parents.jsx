@@ -1,102 +1,108 @@
-import React from 'react';
-import { Users, MoreVertical, Trash2, PencilLine } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { db } from "../../firebase";
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { Trash2, Edit3, Search, X, UserCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import Swal from "sweetalert2";
+import SkeletonRegistry from "./SkeletonRegistry";
 
 const Parents = () => {
-    const parents = [
-        { id: 1, name: 'Robert Wilson', email: 'robert@example.com', stuId: '1', stuName: 'Ayush', college: 'LPS SouthCity', status: 'Active' },
-        { id: 2, name: 'Sarah Brown', email: 'sarah@example.com', stuId: '2', stuName: 'Narendra', college: 'Army Public School', status: 'Active' },
-        { id: 3, name: 'Tom Davis', email: 'tom@example.com', stuId: '3', stuName: 'Adarsh', college: 'Amity Internationals', status: 'Inactive' },
-        { id: 4, name: 'Emma Johnson', email: 'emma@example.com', stuId: '4', stuName: 'Priya', college: 'DPS Noida', status: 'Pending' },
-        { id: 5, name: 'John Smith', email: 'john@example.com', stuId: '5', stuName: 'Rahul', college: 'Kendriya Vidyalaya', status: 'Active' },
-        { id: 6, name: 'Lucas White', email: 'lucas@example.com', stuId: '6', stuName: 'Ishita', college: 'Lotus Valley', status: 'Inactive' },
-        { id: 7, name: 'Olivia Taylor', email: 'olivia@example.com', stuId: '7', stuName: 'Arjun', college: 'St. Xavier’s', status: 'Active' },
-        { id: 8, name: 'James Green', email: 'james@example.com', stuId: '8', stuName: 'Simran', college: 'The Heritage School', status: 'Inactive' },
-        { id: 9, name: 'Sophia Miller', email: 'sophia@example.com', stuId: '9', stuName: 'Aditi', college: 'Ryan International', status: 'Active' },
-        { id: 10, name: 'Liam Martin', email: 'liam@example.com', stuId: '10', stuName: 'Karan', college: 'Mount Carmel', status: 'Pending' },
-        { id: 11, name: 'Charlotte Lee', email: 'charlotte@example.com', stuId: '11', stuName: 'Sneha', college: 'Gems International', status: 'Active' },
-        { id: 12, name: 'Ethan Walker', email: 'ethan@example.com', stuId: '12', stuName: 'Vikram', college: 'Springfield School', status: 'Inactive' },
-        { id: 13, name: 'Amelia Scott', email: 'amelia@example.com', stuId: '13', stuName: 'Ananya', college: 'Oakridge International', status: 'Active' },
-        { id: 14, name: 'Mason Harris', email: 'mason@example.com', stuId: '14', stuName: 'Kabir', college: 'Delhi Public School', status: 'Pending' },
-        { id: 15, name: 'Isabella Thompson', email: 'isabella@example.com', stuId: '15', stuName: 'Rohan', college: 'Cambridge School', status: 'Active' }
-      ];
-      
+    const [parents, setParents] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [editingUser, setEditingUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-  return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-2">
-          <Users className="w-6 h-6 text-blue-500" />
-          <h1 className="text-2xl font-bold">Parents</h1>
+    useEffect(() => {
+        const q = query(collection(db, "users"), where("role", "==", "parent"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Alphabetical Sort Logic
+            const sortedData = fetchedData.sort((a, b) => {
+                const nameA = (a.name || "").toLowerCase();
+                const nameB = (b.name || "").toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+
+            setParents(sortedData);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            await updateDoc(doc(db, "users", editingUser.id), { ...editingUser });
+            setEditingUser(null);
+            Swal.fire('Success', 'Parental link updated.', 'success');
+        } catch (err) { Swal.fire('Error', err.message, 'error'); }
+    };
+
+    const handleDelete = async (id, name) => {
+        const result = await Swal.fire({ title: 'Delete Family?', text: `Remove ${name}?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' });
+        if (result.isConfirmed) { await deleteDoc(doc(db, "users", id)); Swal.fire('Deleted!', 'Parent removed.', 'success'); }
+    };
+
+    const filtered = parents.filter(p => (p.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || (p.email || "").toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (loading) return <SkeletonRegistry />;
+
+    return (
+        <div className="p-10 bg-white dark:bg-slate-900 min-h-screen">
+            <div className="flex justify-between items-center mb-10">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl"><UserCircle className="text-amber-600" /></div>
+                    <h2 className="text-3xl font-black dark:text-white uppercase tracking-tighter">Parent Registry</h2>
+                </div>
+                <div className="relative w-80">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input type="text" placeholder="Search Parents..." className="w-full p-3 pl-12 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold dark:text-white outline-none" onChange={(e) => setSearchTerm(e.target.value)} />
+                </div>
+            </div>
+
+            <div className="border dark:border-slate-800 rounded-[40px] overflow-hidden shadow-sm">
+                <table className="w-full text-left font-bold">
+                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-widest">
+                    <tr><th className="p-6">Parent</th><th className="p-6">Email</th><th className="p-6">Mobile</th><th className="p-6">Kid's Email</th><th className="p-6 text-right">Actions</th></tr>
+                    </thead>
+                    <tbody className="divide-y dark:divide-slate-800">
+                    {filtered.map(p => (
+                        <tr key={p.id} className="text-sm dark:text-slate-300">
+                            <td className="p-6 uppercase text-slate-800 dark:text-white">{p.name}</td>
+                            <td className="p-6 text-slate-500">{p.email}</td>
+                            <td className="p-6 text-slate-500">{p.phone}</td>
+                            <td className="p-6 text-emerald-600 font-black italic">{p.kidEmail}</td>
+                            <td className="p-6 text-right flex justify-end gap-2">
+                                <button onClick={() => setEditingUser(p)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"><Edit3 className="w-4 h-4" /></button>
+                                <button onClick={() => handleDelete(p.id, p.name)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <AnimatePresence>
+                {editingUser && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-sm">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 p-8 rounded-[40px] w-full max-w-md shadow-2xl">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-xl font-black uppercase dark:text-white">Edit Parent</h3>
+                                <button onClick={() => setEditingUser(null)}><X className="dark:text-white" /></button>
+                            </div>
+                            <form onSubmit={handleUpdate} className="space-y-4">
+                                <input className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none font-bold dark:text-white" value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} placeholder="Name" />
+                                <input className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none font-bold dark:text-white" value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} placeholder="Mobile" />
+                                <input className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl outline-none font-bold text-emerald-600" value={editingUser.kidEmail} onChange={e => setEditingUser({...editingUser, kidEmail: e.target.value})} placeholder="Kid's Email" />
+                                <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-2xl shadow-lg mt-4">Save Changes</button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
-       
-      </div>
-
-      <div className="bg-white rounded-lg shadow">
-        <table className="min-w-full">
-          <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parent Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Unique ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School</th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th> */}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {parents.map((parent) => (
-              <tr key={parent.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      {parent.name.charAt(0)}
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{parent.name}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{parent.email}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{parent.stuId}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{parent.stuName}</div>
-                </td>
-                
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{parent.college}</div>
-                </td>
-                {/* <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    parent.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {parent.status}
-                  </span>
-                </td> */}
-                {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex space-x-3">
-                    <button className="text-blue-500 hover:text-blue-700">
-                      <PencilLine className="w-5 h-5" />
-                    </button>
-                    <button className="text-red-500 hover:text-red-700">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                    <button className="text-gray-500 hover:text-gray-700">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                  </div>
-                </td> */}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Parents;

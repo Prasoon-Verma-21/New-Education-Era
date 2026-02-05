@@ -50,21 +50,20 @@ const Navbar = () => {
   };
 
   return (
-      <nav className="fixed top-0 left-0 w-full bg-white dark:bg-slate-900 shadow-md dark:shadow-slate-950/50 z-50 flex justify-between items-center px-4 py-3 border-b dark:border-slate-800 transition-colors duration-300">
+      <nav className="fixed top-0 left-0 w-full bg-white dark:bg-slate-900 shadow-md z-50 flex justify-between items-center px-4 py-3 border-b dark:border-slate-800 transition-colors duration-300">
 
-        {/* 1. LOGO SECTION */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <img src={logo} alt="Logo" className="h-9 w-9 object-contain" />
           <span className="text-lg font-bold text-gray-800 dark:text-white hidden sm:block">New Education Era</span>
         </div>
 
-        {/* 2. CENTER LINKS (Full Restoration) */}
         <div className="flex items-center gap-1 lg:gap-2 flex-grow justify-center">
           <Link to="/" className={getLinkStyle("/")}>Home</Link>
           <Link to="/about" className={getLinkStyle("/about")}>About</Link>
           <Link to="/contact" className={getLinkStyle("/contact")}>Contact Us</Link>
 
-          {isLoggedIn && (userData?.role === 'teacher' || userData?.role === 'admin' || userData?.role === 'subadmin') && (
+          {/* UPDATED: Only show these operational tools to the Teacher */}
+          {isLoggedIn && userData?.role === 'teacher' && (
               <>
                 <Link to="/early-warning" className={getLinkStyle("/early-warning")}>Early Warning</Link>
                 <Link to="/dropout-analytics" className={getLinkStyle("/dropout-analytics")}>Dropout Analytics</Link>
@@ -73,47 +72,23 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* 3. PROFILE & THEME TOGGLE */}
         <div className="flex items-center gap-3 flex-shrink-0 border-l dark:border-slate-800 pl-3 ml-2 relative">
-
-          {/* THEME TOGGLE BUTTON */}
-          <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-yellow-400 transition-all hover:ring-2 hover:ring-blue-400"
-          >
+          <button onClick={toggleTheme} className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-yellow-400 hover:ring-2 hover:ring-blue-400">
             {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
           {isLoggedIn && userData ? (
-              <div
-                  className="flex items-center gap-2 cursor-pointer group"
-                  onClick={() => setShowDropdown(!showDropdown)}
-              >
+              <div className="flex items-center gap-2 cursor-pointer group" onClick={() => setShowDropdown(!showDropdown)}>
                 <div className="text-right hidden md:block">
-                  {userData.school && (
-                      <p className="text-[9px] font-bold text-blue-500 uppercase leading-none mb-0.5">
-                        {userData.school}
-                      </p>
-                  )}
                   <p className="text-gray-800 dark:text-white font-extrabold text-[11px] leading-none uppercase group-hover:text-blue-600">
-                    {userData.username || userData.name}
+                    {userData.name}
                   </p>
                   <p className="text-[9px] uppercase text-gray-400 font-bold">({userData.role})</p>
                 </div>
 
-                <svg
-                    className={`w-3 h-3 text-gray-400 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`}
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
-                </svg>
-
+                {/* Dropdown Menu */}
                 {showDropdown && (
-                    <div className="absolute right-0 top-12 w-48 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-2xl rounded-xl py-2 z-50 animate-in fade-in zoom-in duration-150">
-                      <div className="px-4 py-2 border-b border-gray-50 dark:border-slate-700 mb-1">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Account Menu</p>
-                      </div>
-
+                    <div className="absolute right-0 top-12 w-48 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 shadow-2xl rounded-xl py-2 z-50">
                       <Link
                           to={userData.role === 'admin' ? '/admin' : `/${userData.role}-dashboard`}
                           className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-slate-700 font-bold"
@@ -121,21 +96,20 @@ const Navbar = () => {
                       >
                         📊 View Dashboard
                       </Link>
-
-                      <div className="border-t border-gray-100 dark:border-slate-700 my-1"></div>
-                      <button
-                          onClick={handleLogout}
-                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold"
-                      >
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold">
                         Logout
                       </button>
                     </div>
                 )}
               </div>
           ) : (
-              <button onClick={() => navigate("/signin")} className="border-2 border-blue-600 text-blue-600 px-4 py-1 rounded-md text-xs font-bold hover:bg-blue-600 hover:text-white transition-all">
-                Sign In
-              </button>
+              <button onClick={() => navigate("/signin")} className="border-2 border-blue-600 text-blue-600 px-4 py-1 rounded-md text-xs font-bold hover:bg-blue-600 hover:text-white transition-all">Sign In</button>
+          )}
+
+          {isLoggedIn && userData?.role === 'admin' && (
+              <Link to="/admin" className="bg-red-600 text-white px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest animate-pulse hover:bg-red-700 transition-all shadow-lg shadow-red-500/20">
+                Command Center
+              </Link>
           )}
         </div>
       </nav>

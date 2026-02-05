@@ -1,235 +1,108 @@
-import React, { useState } from 'react';
-import { Users, MoreVertical, Trash2, PencilLine } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { db } from "../../firebase";
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { Trash2, Edit3, Search, X, GraduationCap } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import Swal from "sweetalert2";
+import SkeletonRegistry from "./SkeletonRegistry";
 
 const Students = () => {
-  const [students, setStudents] = useState([
-    { email: 'robert@example.com', stuId: '1', stuName: 'Ayush', college: 'LPS SouthCity', status: 'Active', class: '5th' },
-    { email: 'sarah@example.com', stuId: '2', stuName: 'Narendra', college: 'Army Public School', status: 'Active', class: '5th' },
-    { email: 'tom@example.com', stuId: '3', stuName: 'Adarsh', college: 'Amity Internationals', status: 'Inactive', class: '5th' },
-    { email: 'emma@example.com', stuId: '4', stuName: 'Priya', college: 'DPS Noida', status: 'Pending', class: '6th' },
-    { email: 'john@example.com', stuId: '5', stuName: 'Rahul', college: 'Kendriya Vidyalaya', status: 'Active', class: '6th' },
-    { email: 'lucas@example.com', stuId: '6', stuName: 'Ishita', college: 'Lotus Valley', status: 'Inactive', class: '7th' },
-    { email: 'olivia@example.com', stuId: '7', stuName: 'Arjun', college: 'St. Xavier’s', status: 'Active', class: '8th' },
-    { email: 'james@example.com', stuId: '8', stuName: 'Simran', college: 'The Heritage School', status: 'Inactive', class: '7th' },
-    { email: 'sophia@example.com', stuId: '9', stuName: 'Aditi', college: 'Ryan International', status: 'Active', class: '5th' },
-    { email: 'liam@example.com', stuId: '10', stuName: 'Karan', college: 'Mount Carmel', status: 'Pending', class: '6th' }
-  ]);
+  const [students, setStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingUser, setEditingUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [newStudent, setNewStudent] = useState({
-    email: '',
-    last_percentage: '',
-    attendance: '',
-    parents_qualification: '',
-    area: '',
-    num_teachers: '',
-    income: '',
-    class: '',
-    school: ''
-  });
+  useEffect(() => {
+    const q = query(collection(db, "users"), where("role", "==", "student"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewStudent({ ...newStudent, [name]: value });
-  };
+      // Alphabetical Sort Logic
+      const sortedData = fetchedData.sort((a, b) => {
+        const nameA = (a.name || "").toLowerCase();
+        const nameB = (b.name || "").toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
 
-  const handleAddStudent = () => {
-    // Add the new student to the list and clear the form
-    setStudents([
-      ...students,
-      {
-        ...newStudent,
-        stuId: (students.length + 1).toString(),
-        stuName: newStudent.email.split('@')[0], // Just an example, you can adjust this logic
-        college: newStudent.school,
-        status: 'Pending', // Default status
-        class: newStudent.class
-      },
-    ]);
-    // Reset form
-    setNewStudent({
-      email: '',
-      last_percentage: '',
-      attendance: '',
-      parents_qualification: '',
-      area: '',
-      num_teachers: '',
-      income: ''
+      setStudents(sortedData);
+      setLoading(false);
     });
-    document.getElementById('addStudentModal').classList.add('hidden')
+    return () => unsubscribe();
+  }, []);
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      await updateDoc(doc(db, "users", editingUser.id), { ...editingUser });
+      setEditingUser(null);
+      Swal.fire('Success', 'Student registry updated.', 'success');
+    } catch (err) { Swal.fire('Error', err.message, 'error'); }
   };
+
+  const handleDelete = async (id, name) => {
+    const result = await Swal.fire({ title: 'Remove Student?', text: `Delete ${name}?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' });
+    if (result.isConfirmed) { await deleteDoc(doc(db, "users", id)); Swal.fire('Deleted!', 'User removed.', 'success'); }
+  };
+
+  const filtered = students.filter(s => (s.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || (s.email || "").toLowerCase().includes(searchTerm.toLowerCase()));
+
+  if (loading) return <SkeletonRegistry />;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-2">
-          <Users className="w-6 h-6 text-blue-500" />
-          <h1 className="text-2xl font-bold">Students</h1>
+      <div className="p-10 bg-white dark:bg-slate-900 min-h-screen">
+        <div className="flex justify-between items-center mb-10">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl"><GraduationCap className="text-emerald-600" /></div>
+            <h2 className="text-3xl font-black dark:text-white uppercase tracking-tighter">Student Registry</h2>
+          </div>
+          <div className="relative w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input type="text" placeholder="Search Students..." className="w-full p-3 pl-12 bg-slate-50 dark:bg-slate-800 rounded-2xl font-bold dark:text-white outline-none" onChange={(e) => setSearchTerm(e.target.value)} />
+          </div>
         </div>
-       <a href='https://student-dropout1.onrender.com/' target='_blank' className='px-3 py-2 bg-blue-500 rounded-xl text-white'>Drop-out %</a>
-        <button
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg"
-          onClick={() => document.getElementById('addStudentModal').classList.remove('hidden')}
-        >
-          Add Student Details
-        </button>
-      </div>
 
-      <div className="bg-white rounded-lg shadow mb-6">
-        <table className="min-w-full">
-          <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Unique ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School</th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th> */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Drop-out %</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {students.map((student) => (
-              <tr key={student.stuId}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      {student.stuName.charAt(0)}
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{student.stuName}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{student.stuId}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{student.email}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{student.class}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{student.college}</div>
-                </td>
-                {/* <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    student.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {student.status}
-                  </span>
-                </td> */}
-                <td>
-                  <a href='https://indeividual-student.onrender.com/' target='_blank'>
-                    <button  className='p-2 ml-7 bg-blue-500 rounded-xl text-white hover:scale-105'>Check</button>
-                  </a>
-                </td>
-                {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex space-x-3">
-                    <button className="text-blue-500 hover:text-blue-700">
-                      <PencilLine className="w-5 h-5" />
-                    </button>
-                    <button className="text-red-500 hover:text-red-700">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                    <button className="text-gray-500 hover:text-gray-700">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                  </div>
-                </td> */}
-              </tr>
+        <div className="border dark:border-slate-800 rounded-[40px] overflow-hidden shadow-sm">
+          <table className="w-full text-left font-bold">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-widest">
+            <tr><th className="p-6">Student</th><th className="p-6">Email</th><th className="p-6">Class</th><th className="p-6">School</th><th className="p-6 text-right">Actions</th></tr>
+            </thead>
+            <tbody className="divide-y dark:divide-slate-800">
+            {filtered.map(s => (
+                <tr key={s.id} className="text-sm dark:text-slate-300">
+                  <td className="p-6 uppercase text-slate-800 dark:text-white">{s.name}</td>
+                  <td className="p-6 text-slate-500">{s.email}</td>
+                  <td className="p-6 text-blue-600 font-black uppercase">{s.Class}</td>
+                  <td className="p-6 text-slate-400">{s.school}</td>
+                  <td className="p-6 text-right flex justify-end gap-2">
+                    <button onClick={() => setEditingUser(s)} className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"><Edit3 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(s.id, s.name)} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                  </td>
+                </tr>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Add Student Modal */}
-      <div id="addStudentModal" className="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center">
-        <div className="bg-white p-8 rounded-lg max-w-md w-full">
-          <h2 className="text-xl font-bold mb-4">Add Student Details</h2>
-          <div className="space-y-4">
-            <input
-              type="email"
-              name="email"
-              value={newStudent.email}
-              onChange={handleInputChange}
-              placeholder="Email"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-            <input
-              type="text"
-              name="class"
-              value={newStudent.class}
-              onChange={handleInputChange}
-              placeholder="Class"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-            <input
-              type="text"
-              name="school"
-              value={newStudent.school}
-              onChange={handleInputChange}
-              placeholder="Coolege/School"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-            <input
-              type="number"
-              name="attendance"
-              value={newStudent.attendance}
-              onChange={handleInputChange}
-              placeholder="Attendance Percentage"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-            <input
-              type="text"
-              name="parents_qualification"
-              value={newStudent.parents_qualification}
-              onChange={handleInputChange}
-              placeholder="Parent's Qualification"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-            <input
-              type="text"
-              name="area"
-              value={newStudent.area}
-              onChange={handleInputChange}
-              placeholder="Area (Urban/Rural)"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-            <input
-              type="number"
-              name="num_teachers"
-              value={newStudent.num_teachers}
-              onChange={handleInputChange}
-              placeholder="Number of Teachers per 50 Students"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-            <input
-              type="number"
-              name="income"
-              value={newStudent.income}
-              onChange={handleInputChange}
-              placeholder="Income"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-          </div>
-          <div className="mt-4 flex justify-end space-x-4">
-            <button
-              onClick={() => document.getElementById('addStudentModal').classList.add('hidden')}
-              className="px-4 py-2 bg-gray-300 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAddStudent}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg"
-            >
-              Add Student
-            </button>
-          </div>
+            </tbody>
+          </table>
         </div>
+
+        <AnimatePresence>
+          {editingUser && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/60 backdrop-blur-sm">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 p-8 rounded-[40px] w-full max-w-md shadow-2xl">
+                  <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-xl font-black uppercase dark:text-white">Edit Student</h3>
+                    <button onClick={() => setEditingUser(null)}><X className="dark:text-white" /></button>
+                  </div>
+                  <form onSubmit={handleUpdate} className="space-y-4">
+                    <input className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none font-bold dark:text-white" value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} placeholder="Name" />
+                    <input className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none font-bold dark:text-white" value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} placeholder="Mobile" />
+                    <input className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none font-bold dark:text-white" value={editingUser.Class} onChange={e => setEditingUser({...editingUser, Class: e.target.value})} placeholder="Class" />
+                    <input className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none font-bold dark:text-white" value={editingUser.school} onChange={e => setEditingUser({...editingUser, school: e.target.value})} placeholder="School" />
+                    <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-2xl shadow-lg mt-4">Save Changes</button>
+                  </form>
+                </motion.div>
+              </div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
   );
 };
 

@@ -22,46 +22,39 @@ const EarlyWarning = () => {
     pwd: 'No', familyIncome: 'Low', arrears: '0'
   });
 
-  // 1. Live Lookup for Name based on Email
   // 1. SECURE Live Lookup for Name based on Email
   const lookupStudentByName = async (email) => {
     const cleanEmail = email.trim().toLowerCase();
 
-    // Safety check: Don't search if email is empty or invalid
     if (!cleanEmail || !cleanEmail.includes("@")) {
       setIsStudentFound(false);
       return;
     }
 
     try {
-      // Create queries that strictly filter by the Teacher's school
       const academicQuery = query(
           collection(db, "students"),
           where("email", "==", cleanEmail),
-          where("school", "==", userData.school) // STICKY FILTER: Must match Teacher's school
+          where("school", "==", userData.school)
       );
 
       const userQuery = query(
           collection(db, "users"),
           where("email", "==", cleanEmail),
           where("role", "==", "student"),
-          where("school", "==", userData.school) // STICKY FILTER: Must match Teacher's school
+          where("school", "==", userData.school)
       );
 
       const [academicSnap, userSnap] = await Promise.all([getDocs(academicQuery), getDocs(userQuery)]);
 
       if (!academicSnap.empty) {
-        // Match found in your school's registry
         setFormData(prev => ({ ...prev, name: academicSnap.docs[0].data().name }));
         setIsStudentFound(true);
       } else if (!userSnap.empty) {
-        // Match found in your school's user accounts
         setFormData(prev => ({ ...prev, name: userSnap.docs[0].data().username || userSnap.docs[0].data().name }));
         setIsStudentFound(true);
       } else {
-        // No match found IN YOUR SCHOOL (even if they exist elsewhere)
         setIsStudentFound(false);
-        // Clear name if previously set so you don't accidentally leak data
         setFormData(prev => ({ ...prev, name: '' }));
       }
     } catch (error) {
@@ -78,7 +71,6 @@ const EarlyWarning = () => {
     }, 800);
   };
 
-  // 2. Load Class Logic
   useEffect(() => {
     const fetchClassStudents = async () => {
       if (!isLoggedIn || !userData?.school || !userData?.assignedClass) return;
@@ -91,7 +83,7 @@ const EarlyWarning = () => {
         );
         const querySnapshot = await getDocs(q);
         setStudents(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (err) { console.error(err); }
+      } catch (err) { console.error("Error fetching class-specific students:", err); }
     };
     if (inputMode === "database") fetchClassStudents();
   }, [inputMode, isLoggedIn, userData]);
@@ -153,6 +145,10 @@ const EarlyWarning = () => {
     } catch (err) { Swal.fire("Error", err.message, "error"); }
   };
 
+  // Reusable tailwind styles for consistency
+  const inputBase = "w-full p-3 border-2 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 text-gray-800 dark:text-white font-bold outline-none focus:border-blue-500 placeholder-gray-400 dark:placeholder-slate-500 transition-colors";
+  const selectBase = "w-full p-3 border-2 dark:border-slate-700 rounded-2xl font-bold bg-white dark:bg-slate-800 text-gray-800 dark:text-white outline-none focus:border-blue-500 transition-colors";
+
   return (
       <div className="min-h-screen bg-gray-50 dark:bg-slate-950 p-8 pt-24 transition-colors duration-300">
         <div className="max-w-6xl mx-auto bg-white dark:bg-slate-900 shadow-xl rounded-[40px] p-10 border dark:border-slate-800">
@@ -168,8 +164,8 @@ const EarlyWarning = () => {
           </div>
 
           {inputMode === "database" && (
-              <div className="mb-8 p-6 bg-blue-50 dark:bg-indigo-950/20 border border-blue-100 dark:border-indigo-900/50 rounded-3xl">
-                <select onChange={handleStudentSelect} className="w-full p-4 border-2 dark:border-slate-700 rounded-2xl text-center font-bold bg-white dark:bg-slate-800 dark:text-white outline-none focus:border-blue-500">
+              <div className="mb-8 p-6 bg-blue-50 dark:bg-indigo-950/20 border border-blue-100 dark:border-indigo-900/50 rounded-3xl text-center">
+                <select onChange={handleStudentSelect} className={selectBase}>
                   <option value="">-- Select Student Registry --</option>
                   {students.map(s => <option key={s.id} value={s.email}>{s.name} ({s.email})</option>)}
                 </select>
@@ -181,33 +177,33 @@ const EarlyWarning = () => {
             {/* ACADEMIC PROFILE (BLUE) */}
             <div className="space-y-4 bg-blue-50 dark:bg-slate-800/40 p-6 rounded-[30px] border border-blue-100 dark:border-slate-700">
               <h3 className="font-black text-blue-800 dark:text-indigo-400 text-[10px] uppercase tracking-widest mb-4">Academic Profile</h3>
-              <input type="email" placeholder="Student Email (Optional)" value={formData.email} onChange={handleEmailChange} className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 font-bold outline-none focus:border-blue-500" />
+              <input type="email" placeholder="Student Email" value={formData.email} onChange={handleEmailChange} className={inputBase} />
 
               <div className="relative">
-                <input type="text" placeholder="Student Name" value={formData.name} required readOnly={isStudentFound} onChange={(e) => setFormData({...formData, name: e.target.value})} className={`w-full p-3 border-2 rounded-2xl font-bold outline-none transition-all ${isStudentFound ? 'bg-gray-100 dark:bg-slate-700 border-emerald-500 text-emerald-600' : 'bg-white dark:bg-slate-800'}`} />
+                <input type="text" placeholder="Student Name" value={formData.name} required readOnly={isStudentFound} onChange={(e) => setFormData({...formData, name: e.target.value})} className={`${inputBase} ${isStudentFound ? 'bg-gray-100 dark:bg-slate-700/50 border-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}`} />
                 {isStudentFound && <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />}
               </div>
 
-              <input type="number" placeholder="Attendance %" value={formData.attendance} required className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 font-bold outline-none" onChange={(e) => setFormData({...formData, attendance: e.target.value})} />
-              <input type="number" step="0.1" placeholder="Current GPA" value={formData.gpa} required className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 font-bold outline-none" onChange={(e) => setFormData({...formData, gpa: e.target.value})} />
-              <input type="number" placeholder="No. of Arrears" value={formData.arrears} required className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 font-bold outline-none" onChange={(e) => setFormData({...formData, arrears: e.target.value})} />
+              <input type="number" placeholder="Attendance %" value={formData.attendance} required className={inputBase} onChange={(e) => setFormData({...formData, attendance: e.target.value})} />
+              <input type="number" step="0.1" placeholder="Current GPA" value={formData.gpa} required className={inputBase} onChange={(e) => setFormData({...formData, gpa: e.target.value})} />
+              <input type="number" placeholder="No. of Arrears" value={formData.arrears} required className={inputBase} onChange={(e) => setFormData({...formData, arrears: e.target.value})} />
             </div>
 
             {/* SOCIO-ECONOMIC (GREEN) */}
             <div className="space-y-4 bg-green-50 dark:bg-slate-800/40 p-6 rounded-[30px] border border-green-100 dark:border-slate-700">
               <h3 className="font-black text-green-800 dark:text-emerald-400 text-[10px] uppercase tracking-widest mb-4">Socio-Economic</h3>
-              <select className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl font-bold bg-white dark:bg-slate-800 outline-none" value={formData.familyIncome} onChange={(e) => setFormData({...formData, familyIncome: e.target.value})}>
+              <select className={selectBase} value={formData.familyIncome} onChange={(e) => setFormData({...formData, familyIncome: e.target.value})}>
                 <option value="Middle">Middle Income</option>
                 <option value="Low">Low Income</option>
                 <option value="Below Poverty Line">Below Poverty Line (BPL)</option>
               </select>
-              <select className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl font-bold bg-white dark:bg-slate-800 outline-none" value={formData.parentJob} onChange={(e) => setFormData({...formData, parentJob: e.target.value})}>
+              <select className={selectBase} value={formData.parentJob} onChange={(e) => setFormData({...formData, parentJob: e.target.value})}>
                 <option value="Salaried">Salaried</option>
                 <option value="Agriculture">Agriculture</option>
                 <option value="Daily Wage">Daily Wage Labor</option>
                 <option value="Migrant Labor">Migrant Labor</option>
               </select>
-              <select className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl font-bold bg-white dark:bg-slate-800 outline-none" value={formData.parentEdu} onChange={(e) => setFormData({...formData, parentEdu: e.target.value})}>
+              <select className={selectBase} value={formData.parentEdu} onChange={(e) => setFormData({...formData, parentEdu: e.target.value})}>
                 <option value="Secondary">Secondary Education</option>
                 <option value="Illiterate">No Formal Education</option>
                 <option value="Primary">Primary Education</option>
@@ -217,22 +213,22 @@ const EarlyWarning = () => {
             {/* ENVIRONMENT (PURPLE) */}
             <div className="space-y-4 bg-purple-50 dark:bg-slate-800/40 p-6 rounded-[30px] border border-purple-100 dark:border-slate-700">
               <h3 className="font-black text-purple-800 dark:text-purple-400 text-[10px] uppercase tracking-widest mb-4">Environment</h3>
-              <input type="number" placeholder="Distance (km)" value={formData.distance} required className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800 font-bold" onChange={(e) => setFormData({...formData, distance: e.target.value})} />
-              <select className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl font-bold bg-white dark:bg-slate-800" value={formData.areaType} onChange={(e) => setFormData({...formData, areaType: e.target.value})}>
+              <input type="number" placeholder="Distance (km)" value={formData.distance} required className={inputBase} onChange={(e) => setFormData({...formData, distance: e.target.value})} />
+              <select className={selectBase} value={formData.areaType} onChange={(e) => setFormData({...formData, areaType: e.target.value})}>
                 <option value="Rural">Rural</option>
                 <option value="Urban">Urban</option>
               </select>
-              <select className="w-full p-3 border-2 dark:border-slate-700 rounded-2xl font-bold bg-white dark:bg-slate-800" value={formData.pwd} onChange={(e) => setFormData({...formData, pwd: e.target.value})}>
+              <select className={selectBase} value={formData.pwd} onChange={(e) => setFormData({...formData, pwd: e.target.value})}>
                 <option value="No">Special Needs: No</option>
                 <option value="Yes">Special Needs: Yes</option>
               </select>
               <div className="pt-2">
                 <label className="text-[9px] font-black text-purple-700 dark:text-purple-400 uppercase tracking-widest block mb-2 text-center">Class Participation (1-10)</label>
-                <input type="range" min="1" max="10" value={formData.participation} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" onChange={(e) => setFormData({...formData, participation: e.target.value})} />
+                <input type="range" min="1" max="10" value={formData.participation} className="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600" onChange={(e) => setFormData({...formData, participation: e.target.value})} />
               </div>
             </div>
 
-            <button type="submit" disabled={isAnalyzing} className="md:col-span-3 py-5 bg-blue-600 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-xl hover:bg-blue-700 transition-all active:scale-95">
+            <button type="submit" disabled={isAnalyzing} className="md:col-span-3 py-5 bg-blue-600 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-xl hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50">
               {isAnalyzing ? "Processing Analytics..." : "Analyze Dropout Risk"}
             </button>
           </form>
@@ -244,7 +240,7 @@ const EarlyWarning = () => {
                     {result.label.toUpperCase()} ({result.score}/100)
                   </h3>
                   <div className="flex justify-center gap-6 mt-10">
-                    <button onClick={saveStudent} className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700">Update Monthly Telemetry</button>
+                    <button onClick={saveStudent} className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-blue-700 transition-all active:scale-95">Update Monthly Telemetry</button>
                   </div>
                 </motion.div>
             )}
