@@ -1,3 +1,19 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production
+/dist
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
 # local env files
 .env.local
 .env.development.local

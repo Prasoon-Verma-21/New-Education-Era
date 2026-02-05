@@ -22,7 +22,6 @@ import ParentingFAQs from './Parent\'s Corner/ParentingFaq';
 import './index.css';
 import Footer from "./components/Footer";
 import About from "./pages/About";
-import StudentDashboard from "./components/StudentDashboard";
 import ChatBox from "./chatbot/ChatBot";
 import CalendarView from "./Schooling/CalendarView";
 import ProgressPage from "./Schooling/ProgressPage";
