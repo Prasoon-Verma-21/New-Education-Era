@@ -7,7 +7,7 @@ import SubAdmins from './admin/SubAdmins';
 import Parents from './admin/Parents';
 import Students from './admin/Students';
 import DistrictOfficials from './admin/DistrictOfficials';
-import SideNav from './navigation/SideNav';
+import SideNav from "./navigation/SidebarNavigation";
 import { useAuth } from "../context/AuthContext";
 import DropoutAnalytics from '../pages/DropoutAnalytics'; // Your existing component
 
