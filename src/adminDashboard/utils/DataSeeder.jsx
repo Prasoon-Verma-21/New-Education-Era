@@ -1,5 +1,5 @@
 import { db } from "../../firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc} from "firebase/firestore";
 
 export const seedSampleData = async () => {
     const sampleData = [
@@ -10,7 +10,7 @@ export const seedSampleData = async () => {
         { name: "Vikram Raj", riskScore: 35, attendance: 82, gpa: 6.2, distance: 4, arrears: 1, district: "Lucknow", school: "Central Academy", timestamp: new Date() },
         { name: "Anjali Gupta", riskScore: 62, attendance: 70, gpa: 4.9, distance: 8, arrears: 2, district: "Varanasi", school: "Delhi Public School", timestamp: new Date() },
         { name: "Rohan Mehra", riskScore: 18, attendance: 95, gpa: 8.8, distance: 1, arrears: 0, district: "Varanasi", school: "Delhi Public School", timestamp: new Date() },
-        { name: "Karan Johar", riskScore: 92, attendance: 40, gpa: 3.1, distance: 10, arrears: 5, district: "Kanpur", school: "Govt High School", timestamp: new Date() }
+        { name: "Karan Johar", riskScore: 92, attendance: 40, gpa: 3.1, distance: 10, arrears: 5, district: "Kanpur", school: "Seth M. R. Jaipuria School", timestamp: new Date() }
     ];
 
     try {

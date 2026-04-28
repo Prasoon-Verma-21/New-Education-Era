@@ -2,47 +2,50 @@ import { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
-import { AlertCircle, CheckCircle2, BookOpen, Link2, TrendingDown, TrendingUp } from "lucide-react";
+import PropTypes from 'prop-types';
+import { AlertCircle, CheckCircle2, BookOpen, Link2, TrendingDown, TrendingUp, Bell, X, ChevronRight } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from 'react-hot-toast';
 
 const ParentDashboard = () => {
   const { userData } = useAuth();
   const [childStats, setChildStats] = useState(null);
-  const [trendData, setTrendData] = useState([]); // New state for progress chart
+  const [trendData, setTrendData] = useState([]);
+  const [notices, setNotices] = useState([]);
+  const [viewingNotice, setViewingNotice] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userData?.kidEmail) {
-      console.warn("No linked child email found in parent profile.");
+    // 1. Normalize the email to lowercase to prevent matching errors
+    const rawEmail = userData?.kidEmail || "";
+    const cleanEmail = rawEmail.trim().toLowerCase();
+
+    if (!cleanEmail) {
       const timer = setTimeout(() => setLoading(false), 2000);
       return () => clearTimeout(timer);
     }
 
-    // UPDATED: Query the 'predictions' collection for the specific kid's history
+    // 2. Query predictions for the specific student
     const q = query(
         collection(db, "predictions"),
-        where("email", "==", userData.kidEmail),
-        orderBy("timestamp", "asc") // Sort by time to show the trend
+        where("email", "==", cleanEmail),
+        orderBy("timestamp", "asc")
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         const docs = snapshot.docs.map(doc => doc.data());
-
-        // Latest prediction for the hero cards
         const latestData = docs[docs.length - 1];
         setChildStats(latestData);
 
-        // Map data for the Trend Chart (Risk Progress)
         const chartData = docs.map(d => ({
           month: d.month,
-          risk: parseInt(d.riskScore)
+          risk: parseInt(d.riskScore || 0)
         }));
         setTrendData(chartData);
 
-        // EMERGENCY TRIGGER
-        if (parseInt(latestData.riskScore) >= 70) {
+        if (parseInt(latestData.riskScore || 0) >= 70) {
           toast.error(`EMERGENCY ALERT: High risk detected for ${latestData.name}!`, {
             duration: 6000,
             position: 'top-right',
@@ -55,15 +58,30 @@ const ParentDashboard = () => {
       }
       setLoading(false);
     }, (err) => {
-      console.error("Firestore Error:", err);
+      console.error("Firestore Prediction Error:", err);
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [userData]);
+    // 3. Separate Notice Listener to avoid dependency loops
+    const qNotice = query(collection(db, "notices"), orderBy("createdAt", "desc"));
+    const unsubNotice = onSnapshot(qNotice, (snapshot) => {
+      const allNotices = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const filtered = allNotices.filter(n =>
+          n.school === childStats?.school ||
+          (n.district === userData?.district && n.scope === "district")
+      );
+      setNotices(filtered);
+    });
+
+    return () => {
+      unsubscribe();
+      unsubNotice();
+    };
+    // Removed childStats?.school from dependencies to prevent infinite loops
+  }, [userData?.kidEmail, userData?.district, childStats?.school]);
 
   const getIntervention = (score) => {
-    const risk = parseInt(score);
+    const risk = parseInt(score || 0);
     if (risk >= 55) return {
       msg: "Urgent Intervention Required: Contact school counselor.",
       color: "text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400",
@@ -115,11 +133,39 @@ const ParentDashboard = () => {
 
                 <div className="p-10 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[35px] text-white shadow-2xl relative overflow-hidden">
                   <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.2em] mb-2 relative z-10">Stability Index (Improvement Target)</p>
-                  <h2 className="text-8xl font-black tracking-tighter relative z-10">{100 - parseInt(childStats.riskScore)}%</h2>
+                  <h2 className="text-8xl font-black tracking-tighter relative z-10">{100 - parseInt(childStats.riskScore || 0)}%</h2>
                   <div className="absolute -bottom-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
                 </div>
 
-                {/* NEW: Risk Progress Trend Chart */}
+                {/* Broadcasting Registry */}
+                <div className="p-8 bg-white dark:bg-slate-800 rounded-[35px] border border-gray-100 dark:border-slate-700 shadow-sm">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Bell className="w-4 h-4 text-indigo-500" />
+                    <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">Official Broadcast Registry</h3>
+                  </div>
+
+                  <div className="space-y-3 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+                    {notices.length > 0 ? notices.map(n => (
+                        <button
+                            key={n.id}
+                            onClick={() => setViewingNotice(n)}
+                            className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900/50 rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-transparent hover:border-indigo-100"
+                        >
+                          <div className="flex flex-col">
+                          <span className={`text-[8px] font-black uppercase w-fit px-2 py-0.5 rounded ${n.scope === 'district' ? 'bg-indigo-600 text-white' : 'bg-blue-100 text-blue-600'}`}>
+                            {n.scope === 'district' ? 'District' : 'School'}
+                          </span>
+                            <p className="text-sm font-bold text-gray-700 dark:text-slate-200 mt-1">{n.subject}</p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-300" />
+                        </button>
+                    )) : (
+                        <p className="text-[10px] text-slate-400 uppercase font-bold italic text-center py-4">No Jurisdictional Notices.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Risk Progress Trend Chart - FIXED HEIGHT CONTAINER */}
                 <div className="p-8 bg-white dark:bg-slate-800 rounded-[35px] border border-gray-100 dark:border-slate-700 shadow-sm">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-[11px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">Dropout Risk Trend</h3>
@@ -134,7 +180,9 @@ const ParentDashboard = () => {
                         </div>
                     )}
                   </div>
-                  <div className="h-[200px] w-full">
+                  {/* Recharts needs a div with a specific height here */}
+                  {/* Updated wrapper with specific height to satisfy Recharts */}
+                  <div className="h-[250px] w-full min-h-[250px] relative">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={trendData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94a3b8" opacity={0.1} />
@@ -152,7 +200,7 @@ const ParentDashboard = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="p-8 bg-gray-50 dark:bg-slate-800/50 rounded-[30px] border border-gray-100 dark:border-slate-700">
-                    <p className="text-[9px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-1">Kid's Full Name</p>
+                    <p className="text-[9px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-1">Kid&apos;s Full Name</p>
                     <p className="text-2xl font-black text-gray-800 dark:text-gray-100 uppercase tracking-tight">{childStats.name}</p>
                     <p className="text-[10px] font-bold text-indigo-500 mt-1">{childStats.school} • Grade {childStats.class}</p>
                   </div>
@@ -164,17 +212,6 @@ const ParentDashboard = () => {
                     </div>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                  <button className="p-6 bg-indigo-50 dark:bg-indigo-950/20 rounded-3xl border border-indigo-100 dark:border-indigo-900 group hover:bg-indigo-600 transition-all text-left">
-                    <p className="text-indigo-900 dark:text-indigo-300 group-hover:text-white font-black uppercase text-[10px] tracking-widest mb-1">Intervention</p>
-                    <p className="text-gray-800 dark:text-gray-200 group-hover:text-white font-bold">Schedule Counselor Meet</p>
-                  </button>
-                  <button className="p-6 bg-blue-50 dark:bg-blue-950/20 rounded-3xl border border-blue-100 dark:border-blue-900 group hover:bg-blue-600 transition-all text-left">
-                    <p className="text-blue-900 dark:text-blue-300 group-hover:text-white font-black uppercase text-[10px] tracking-widest mb-1">Resources</p>
-                    <p className="text-gray-800 dark:text-gray-200 group-hover:text-white font-bold">Access Support Modules</p>
-                  </button>
-                </div>
               </div>
           ) : (
               <div className="text-center py-20 bg-slate-50 dark:bg-slate-800/30 rounded-[40px] border-4 border-dashed border-slate-100 dark:border-slate-800">
@@ -183,8 +220,37 @@ const ParentDashboard = () => {
               </div>
           )}
         </div>
+
+        <AnimatePresence>
+          {viewingNotice && (
+              <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[40px] shadow-2xl overflow-hidden border dark:border-slate-800">
+                  <div className={`p-8 ${viewingNotice.scope === 'district' ? 'bg-indigo-600' : 'bg-blue-600'} text-white flex justify-between items-center`}>
+                    <div>
+                      <p className="text-[10px] font-black uppercase opacity-60 mb-1">{viewingNotice.scope === 'district' ? 'District Level' : 'School Level'} Bulletin</p>
+                      <h2 className="text-2xl font-black uppercase tracking-tight">{viewingNotice.subject}</h2>
+                    </div>
+                    <button onClick={() => setViewingNotice(null)} className="p-2 hover:bg-white/10 rounded-full transition-all"><X className="w-6 h-6" /></button>
+                  </div>
+                  <div className="p-8 text-gray-700 dark:text-slate-300 leading-relaxed font-semibold bg-gray-50 dark:bg-slate-900/50">
+                    {viewingNotice.message}
+                  </div>
+                  <div className="p-6 bg-white dark:bg-slate-900 flex justify-end">
+                    <button onClick={() => setViewingNotice(null)} className="bg-slate-900 dark:bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs tracking-widest">Close Bulletin</button>
+                  </div>
+                </motion.div>
+              </div>
+          )}
+        </AnimatePresence>
       </div>
   );
 };
+
+const ChevronRightInternal = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+);
+ChevronRightInternal.propTypes = { className: PropTypes.string };
 
 export default ParentDashboard;

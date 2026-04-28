@@ -1,4 +1,4 @@
-import React from 'react';
+//import React from 'react';
 import { Shield, MoreVertical, Trash2, PencilLine } from 'lucide-react';
 import useAdminManagement from '../../hooks/useAdminManagement';
 import AdminModal from '../shared/AdminModal';
@@ -20,7 +20,6 @@ const SuperAdmins = () => {
     handleAdd,
     handleEdit,
     handleDelete,
-    openAddModal,
     openEditModal,
     setIsModalOpen
   } = useAdminManagement(initialSuperAdmins);

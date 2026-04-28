@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import loginImage from '../assets/login.jpg';
@@ -29,7 +29,7 @@ const LoginSignupModal = () => {
   const SCHOOL_DISTRICT_MAP = {
     "Central Academy": "Lucknow",
     "Delhi Public School": "Varanasi",
-    "Govt High School": "Kanpur"
+    "Seth M. R. Jaipuria School": "Kanpur"
   };
 
   const [formData, setFormData] = useState({
@@ -46,26 +46,33 @@ const LoginSignupModal = () => {
       return;
     }
     setVerifyingKid(true);
-    setKidSearchError(false);
     try {
-      const academicQuery = query(collection(db, "students"), where("email", "==", cleanEmail));
-      const academicSnap = await getDocs(academicQuery);
-      if (!academicSnap.empty) {
-        setVerifiedKidName(academicSnap.docs[0].data().name);
-        setKidSearchError(false);
-        setVerifyingKid(false);
-        return;
-      }
-      const userAccountQuery = query(collection(db, "users"), where("email", "==", cleanEmail), where("role", "==", "student"));
+      // We only need to check the 'users' collection where role is 'student'
+      const userAccountQuery = query(
+          collection(db, "users"),
+          where("email", "==", cleanEmail),
+          where("role", "==", "student"),
+          limit(1) // ADD THIS LINE to match the rule's limit constraint
+      );
+
       const userSnap = await getDocs(userAccountQuery);
+
       if (!userSnap.empty) {
-        setVerifiedKidName(userSnap.docs[0].data().username || userSnap.docs[0].data().name);
+        // Your DB screenshot shows the field is 'name'
+        const studentData = userSnap.docs[0].data();
+        setVerifiedKidName(studentData.name);
         setKidSearchError(false);
       } else {
         setVerifiedKidName("");
         setKidSearchError(true);
       }
-    } catch (error) { console.error("Live verify error:", error); } finally { setVerifyingKid(false); }
+    } catch (error) {
+      console.error("Linkage Error:", error);
+      // This will display exactly what Firebase is complaining about
+      setErrorMessage("LINKAGE ERROR: " + error.message.toUpperCase());
+    } finally {
+      setVerifyingKid(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -194,7 +201,7 @@ const LoginSignupModal = () => {
               {/* CONDITIONAL RENDERING: Admin ONLY shows during login */}
               {!isSignup && (
                   <option value="admin" className="text-blue-600 font-black">SYSTEM ADMIN</option>
-              )}
+                  )}
             </select>
 
             {isSignup ? (

@@ -1,33 +1,37 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. Helper function to check if the user is an Admin
-    function isAdmin() {
+    // Helper: Identify staff roles (Admin, Teacher, Headmaster, District Official)
+    function isStaff() {
       return request.auth != null &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['teacher', 'headmaster', 'district_official', 'admin'];
     }
 
-    // 2. Rules for the USERS collection
     match /users/{userId} {
-      // Users can read and edit their own profile
+      // 1. Basic Auth: Users can read/write their own data
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Admins can see and edit all users for the registry
-      allow read, write: if isAdmin();
+
+      // 2. The Linkage Fix: Allow anyone to SEARCH for a student by email
+      // We remove the 'isStaff' requirement here for the signup phase
+      allow read: if (request.query.limit <= 1 && resource.data.role == 'student') || isStaff();
+
+      // 3. Keep standard staff access
+      allow read: if isStaff();
     }
 
-    // 3. Rules for the PREDICTIONS (Intelligence Feed) collection
-    match /predictions/{predictionId} {
-      // Authenticated users can view predictions for the charts
+    match /predictions/{docId} {
+      allow read: if request.auth != null && (
+        request.auth.token.email == resource.data.email ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'parent' ||
+        isStaff()
+      );
+      allow write: if request.auth != null && isStaff();
+    }
+
+    match /notices/{id} {
       allow read: if request.auth != null;
-      // ONLY Admins can add or update prediction data
-      allow write: if isAdmin();
-    }
-
-    // 4. Default deny (Security best practice) [cite: 2026-01-21]
-    match /{document=**} {
-      allow read, write: if false;
+      allow write: if request.auth != null && isStaff();
     }
   }
 }

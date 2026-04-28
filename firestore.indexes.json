@@ -1,24 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "predictions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "email",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        },
-        {
-          "fieldPath": "__name__",
-          "order": "DESCENDING"
-        }
-      ],
-      "density": "SPARSE_ALL"
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

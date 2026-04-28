@@ -36,22 +36,44 @@ const TeacherDashboard = () => {
     }, [userData]);
 
     // 2. SINGLE Real-time Student Sync
+    // 2. SINGLE Real-time Student Sync (Updated to pull from 'users')
     useEffect(() => {
         if (!userData?.school || !auth.currentUser) return;
 
+        // Fetch all students for this school first to avoid strict query issues [cite: 2026-01-22]
         const q = query(
-            collection(db, "students"),
+            collection(db, "users"),
             where("school", "==", userData.school),
-            where("class", "==", userData.assignedClass)
+            where("role", "==", "student")
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Flexible JS filtering: Trims and matches regardless of String or Number
+            const studentList = allStudents.filter(s => {
+                const sClass = String(s.class || "").replace(/\D/g, "");
+                const tClass = String(userData.assignedClass || "").replace(/\D/g, "");
+                return sClass === tClass;
+            }).map(s => {
+                // Baseline risk calculation so dashboard isn't empty
+                let baselineScore = 0;
+                if (parseFloat(s.attendance_percentage) < 75) baselineScore += 30;
+                if (parseFloat(s.current_gpa) < 5.0) baselineScore += 30;
+                if (parseInt(s.academic_arrears) >= 2) baselineScore += 20;
+
+                return {
+                    ...s,
+                    name: s.student_name || s.name,
+                    riskScore: s.riskScore || baselineScore
+                };
+            });
+
             setRecentStudents(studentList);
             setClassData({
                 total: studentList.length,
-                atRisk: studentList.filter(s => parseInt(s.riskScore) >= 55).length,
-                moderate: studentList.filter(s => parseInt(s.riskScore) >= 30 && parseInt(s.riskScore) < 55).length
+                atRisk: studentList.filter(s => s.riskScore >= 55).length,
+                moderate: studentList.filter(s => s.riskScore >= 30 && s.riskScore < 55).length
             });
             setLoading(false);
         }, (error) => {
@@ -137,7 +159,9 @@ const TeacherDashboard = () => {
                         {recentStudents.map(s => (
                             /* Added dark hover and text colors */
                             <tr key={s.id} className="border-b last:border-0 border-gray-100 dark:border-slate-800 hover:bg-blue-50/50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors" onClick={() => setSelectedStudent(s)}>
-                                <td className="p-6 font-bold text-gray-800 dark:text-slate-200">{s.name}</td>
+                                <td className="p-6 font-bold text-gray-800 dark:text-slate-200">
+                                    {s.student_name || s.name}
+                                </td>
                                 <td className="p-6">
                                     <div className="flex items-center gap-2">
                                         <div className="w-24 bg-gray-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">

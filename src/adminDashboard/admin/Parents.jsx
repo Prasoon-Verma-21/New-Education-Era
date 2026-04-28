@@ -1,3 +1,4 @@
+"use client";
 import { useState, useEffect } from "react";
 import { db } from "../../firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
@@ -17,7 +18,6 @@ const Parents = () => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const fetchedData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Alphabetical Sort Logic
             const sortedData = fetchedData.sort((a, b) => {
                 const nameA = (a.name || "").toLowerCase();
                 const nameB = (b.name || "").toLowerCase();
@@ -64,7 +64,14 @@ const Parents = () => {
             <div className="border dark:border-slate-800 rounded-[40px] overflow-hidden shadow-sm">
                 <table className="w-full text-left font-bold">
                     <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] text-slate-400 uppercase tracking-widest">
-                    <tr><th className="p-6">Parent</th><th className="p-6">Email</th><th className="p-6">Mobile</th><th className="p-6">Kid's Email</th><th className="p-6 text-right">Actions</th></tr>
+                    <tr>
+                        <th className="p-6">Parent</th>
+                        <th className="p-6">Email</th>
+                        <th className="p-6">Mobile</th>
+                        {/* FIXED: Escaped apostrophe with &apos; */}
+                        <th className="p-6">Kid&apos;s Email</th>
+                        <th className="p-6 text-right">Actions</th>
+                    </tr>
                     </thead>
                     <tbody className="divide-y dark:divide-slate-800">
                     {filtered.map(p => (
@@ -94,7 +101,8 @@ const Parents = () => {
                             <form onSubmit={handleUpdate} className="space-y-4">
                                 <input className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none font-bold dark:text-white" value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} placeholder="Name" />
                                 <input className="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none font-bold dark:text-white" value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} placeholder="Mobile" />
-                                <input className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl outline-none font-bold text-emerald-600" value={editingUser.kidEmail} onChange={e => setEditingUser({...editingUser, kidEmail: e.target.value})} placeholder="Kid's Email" />
+                                {/* FIXED: Escaped apostrophe in placeholder */}
+                                <input className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl outline-none font-bold text-emerald-600" value={editingUser.kidEmail} onChange={e => setEditingUser({...editingUser, kidEmail: e.target.value})} placeholder="Kid&apos;s Email" />
                                 <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black uppercase text-xs rounded-2xl shadow-lg mt-4">Save Changes</button>
                             </form>
                         </motion.div>

@@ -1,3 +1,4 @@
+import { useState } from 'react'; // Added useState import
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -27,6 +28,7 @@ import CalendarView from "./Schooling/CalendarView";
 import ProgressPage from "./Schooling/ProgressPage";
 import CombinedPage from "./Schooling/CombinedCourse";
 import Admin from "./adminDashboard/Admin";
+
 import RewardSystem from "./components/RewardSystem";
 import Store from "./components/Store";
 import ExpertDashboard from "./components/ExpertDashboard";
@@ -49,30 +51,32 @@ import StudentPortal from "./components/StudentPortal";
 import { Toaster } from 'react-hot-toast';
 import AdminDashboard from "./components/AdminDashboard";
 import { useAuth } from "./context/AuthContext";
-
+import SideNav from "./adminDashboard/navigation/sidenav";
 
 function App() {
   const { isLoggedIn, loading } = useAuth();
+  const [adminTab, setAdminTab] = useState("dashboard");
+
   if (loading) return null;
+
   return (
       <Router>
         <Toaster position="top-right" reverseOrder={false} />
         <div className="overflow-hidden"><Navbar /></div>
-        <div className="overflow-hidden"><Navbar /></div>
         <div className="mt-16 bg-gray-50 overflow-auto min-h-screen">
           <Routes>
+            {/* Standard Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About /> } />
             <Route path="/contact" element={<Contact role="Contact Us" />} />
             <Route path="/signin" element={<LoginSignupModal />} />
             <Route path="/signup" element={<LoginSignupModal />} />
 
-            {/* --- Teacher & Admin Monitoring Routes --- */}
+            {/* Monitoring & Hubs */}
             <Route path="/early-warning" element={<ProtectedRoute><EarlyWarning /></ProtectedRoute>} />
-            <Route path="/dropout-analytics" element={<ProtectedRoute><DropoutAnalytics /></ProtectedRoute>} />
+            <Route path="/dropout-analytics" element={<ProtectedRoute><DropoutAnalytics onBack={() => window.history.back()} /></ProtectedRoute>} />
             <Route path="/student-monitoring" element={<ProtectedRoute><StudentMonitoring /></ProtectedRoute>} />
 
-            {/* --- Learning Hub Section --- */}
             <Route path="/learning-hub" element={<ProtectedRoute><LearningHub /></ProtectedRoute>}/>
             <Route path='/learning-hub/online-consultation' element={<ProtectedRoute><OnlineConsultation /></ProtectedRoute>} />
             <Route path='/learning-hub/resource-library' element={<ProtectedRoute><ResourceLibrary /></ProtectedRoute>} />
@@ -81,27 +85,24 @@ function App() {
             <Route path='/learning-hub/community-forums/:forumName' element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
             <Route path='/learning-hub/virtual-tutoring/booking' element={<ProtectedRoute><BookingConfirmation /></ProtectedRoute>} />
 
-            {/* --- Financial Support Section --- */}
             <Route path="/financial-support" element={<ProtectedRoute><FinancialSupport /></ProtectedRoute>} />
             <Route path='/financial-support/scholarships' element={<ProtectedRoute><Scholarships /></ProtectedRoute>} />
             <Route path='/financial-support/grants' element={<ProtectedRoute><Grants /></ProtectedRoute>} />
             <Route path='/financial-support/loans' element={<ProtectedRoute><Loans /></ProtectedRoute>} />
             <Route path='/financial-support/faq' element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
 
-            {/* --- Parental Engagement Section --- */}
             <Route path="/parental-engagement" element={<ProtectedRoute><ParentPortal /></ProtectedRoute>} />
             <Route path="/parental-engagement/resources" element={<ProtectedRoute><ParentingResources /></ProtectedRoute>} />
             <Route path="/parental-engagement/communication" element={<ProtectedRoute><CommunicationTips /></ProtectedRoute>} />
             <Route path="/parental-engagement/events" element={<ProtectedRoute><UpcomingEvents /></ProtectedRoute>} />
             <Route path="/parental-engagement/faq" element={<ProtectedRoute><ParentingFAQs /></ProtectedRoute>} />
 
-            {/* --- Schooling & Progress Section --- */}
             <Route path="/flexible-schooling" element={<ProtectedRoute><SchoolingManagement /></ProtectedRoute>} />
             <Route path="/schooling/courses" element={<ProtectedRoute><CombinedPage /></ProtectedRoute>} />
             <Route path="/schooling/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
             <Route path="/schooling/studentSchedule" element={<ProtectedRoute><CalendarView /></ProtectedRoute>} />
 
-            {/* --- Role-Based Dashboards (Hyphenated for consistency) --- */}
+            {/* Dashboards */}
             <Route path="/student-dashboard" element={<ProtectedRoute role="student"><StudentPortal /></ProtectedRoute>} />
             <Route path="/teacher-dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
             <Route path="/headmaster-dashboard" element={<ProtectedRoute role="headmaster"><HeadmasterDashboard /></ProtectedRoute>} />
@@ -109,11 +110,20 @@ function App() {
             <Route path="/expert-dashboard" element={<ProtectedRoute role="expert"><ExpertDashboard /></ProtectedRoute>} />
             <Route path="/tutor-dashboard" element={<ProtectedRoute role="tutor"><TutorDashboard /></ProtectedRoute>} />
             <Route path="/parent-dashboard" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
-            <Route path="/admin-dashboard" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin" element={<Admin />} />
 
+            {/* Unified Admin Dashboard */}
+            <Route
+                path="/admin-dashboard"
+                element={
+                  <ProtectedRoute role="admin">
+                    <div className="flex">
+                      <SideNav onPageChange={setAdminTab} currentPage={adminTab} />
+                      <AdminDashboard activeTab={adminTab} />
+                    </div>
+                  </ProtectedRoute>
+                }
+            />
 
-            {/* --- Miscellaneous Features --- */}
             <Route path="/reward" element={<ProtectedRoute><RewardSystem /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute><Store /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><QRScanner /></ProtectedRoute>} />
@@ -122,17 +132,12 @@ function App() {
             <Route path="/admin/school-dropout" element={<CoolegeWiseDropout />} />
 
 
-            {/* --- Legacy/Redirects --- */}
-            <Route path="/student/dashboard" element={<Navigate to="/student-dashboard" />} />
-            <Route path="/teacher/dashboard" element={<Navigate to="/teacher-dashboard" />} />
-            <Route path="/parent-dashboard" element={<ParentDashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            {/* Redirects & Legacy */}
+            <Route path="/admin" element={<Navigate to="/admin-dashboard" replace />} />
+            <Route path="/student/dashboard" element={<Navigate to="/student-dashboard" replace />} />
+            <Route path="/teacher/dashboard" element={<Navigate to="/teacher-dashboard" replace />} />
 
-
-
-            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" />} />
-            <Route path="/admin/*" element={isLoggedIn ? <Admin /> : <Navigate to="/" replace />}/>
           </Routes>
           <ChatBox />
         </div>

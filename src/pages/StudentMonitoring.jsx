@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingDown, TrendingUp, UserCheck, AlertTriangle, Search, X, FileText, Calendar, Activity, BarChart3 } from "lucide-react";
 
@@ -19,45 +19,56 @@ const StudentMonitoring = () => {
             if (!userData?.school || !userData?.assignedClass) return;
 
             try {
-                // 1. Fetch student users - Use "Class" (Uppercase C) to match Signup sanitization
+                // 1. Fetch all students for the school from 'users'
                 const studentUsersQuery = query(
                     collection(db, "users"),
                     where("role", "==", "student"),
-                    where("school", "==", userData.school),
-                    where("Class", "==", userData.assignedClass)
+                    where("school", "==", userData.school)
                 );
                 const userSnapshot = await getDocs(studentUsersQuery);
-                const students = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const allSchoolStudents = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                // 2. Fetch predictions - Use "class" (Lowercase c) to match EarlyWarning logic
-                // NOTE: If this fails, it's likely a missing Index in Firebase
+                // 2. Fetch all predictions for the school
                 const predictionsQuery = query(
                     collection(db, "predictions"),
-                    where("school", "==", userData.school),
-                    where("class", "==", userData.assignedClass)
-                    // Temporarily removed orderBy to ensure data shows while index builds
+                    where("school", "==", userData.school)
                 );
                 const predSnapshot = await getDocs(predictionsQuery);
-                const predictions = predSnapshot.docs.map(doc => doc.data());
+                const allPredictions = predSnapshot.docs.map(doc => doc.data());
 
-                const combinedData = students.map(student => {
-                    // Sort history manually in memory to avoid index requirements for now
-                    const studentHistory = predictions
+                // 3. Flexible Filtering (Handling "12th" vs 12) [cite: 2026-01-22]
+                const teacherClass = String(userData.assignedClass).replace(/\D/g, "");
+
+                const filteredStudents = allSchoolStudents.filter(s => {
+                    const sClass = String(s.class || "").replace(/\D/g, "");
+                    return sClass === teacherClass;
+                });
+
+                const combinedData = filteredStudents.map(student => {
+                    const studentHistory = allPredictions
                         .filter(p => p.email === student.email)
                         .sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
 
                     const latest = studentHistory[studentHistory.length - 1];
                     const previous = studentHistory.length > 1 ? studentHistory[studentHistory.length - 2] : null;
 
-                    const currentRisk = latest ? parseInt(latest.riskScore) : 0;
+                    // --- BASELINE CALCULATION ---
+                    // If no teacher analysis exists yet, calculate baseline from CSV data
+                    let baselineRisk = 0;
+                    if (parseFloat(student.attendance_percentage) < 75) baselineRisk += 30;
+                    if (parseFloat(student.current_gpa) < 5.0) baselineRisk += 30;
+                    if (parseInt(student.academic_arrears) >= 2) baselineRisk += 20;
+
+                    const currentRisk = latest ? parseInt(latest.riskScore) : baselineRisk;
                     const prevRisk = previous ? parseInt(previous.riskScore) : currentRisk;
 
                     return {
                         ...student,
+                        name: student.student_name || student.name || "Unknown Student", // CSV Name Mapping
                         currentRisk,
-                        attendance: latest ? latest.attendance : 0,
+                        attendance: latest ? latest.attendance : (student.attendance_percentage || 0),
                         trend: prevRisk - currentRisk,
-                        lastMonth: latest ? latest.month : "No Data",
+                        lastMonth: latest ? latest.month : "Baseline Analysis",
                         fullHistory: studentHistory
                     };
                 });
@@ -73,9 +84,8 @@ const StudentMonitoring = () => {
         fetchClassData();
     }, [userData]);
 
-    // FIXED: Added null checks for name and email to prevent crashes
     const filteredStudents = studentsList.filter(s => {
-        const name = s.name || s.username || "";
+        const name = s.name || "";
         const email = s.email || "";
         return name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -96,13 +106,12 @@ const StudentMonitoring = () => {
                 </header>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                    {/* Class List Table */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="relative group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search by name or email..."
+                                placeholder="Search by student name..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full p-4 pl-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500 shadow-sm transition-all"
@@ -123,7 +132,7 @@ const StudentMonitoring = () => {
                                 {filteredStudents.length > 0 ? filteredStudents.map((s) => (
                                     <tr key={s.id} className="border-t border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer" onClick={() => setSelectedStudent(s)}>
                                         <td className="p-6">
-                                            <p className="font-black text-slate-800 dark:text-white uppercase text-sm">{s.name || s.username}</p>
+                                            <p className="font-black text-slate-800 dark:text-white uppercase text-sm">{s.name}</p>
                                             <p className="text-[10px] text-slate-400 font-bold">{s.email}</p>
                                         </td>
                                         <td className="p-6 text-center">
@@ -147,7 +156,7 @@ const StudentMonitoring = () => {
                                         </td>
                                     </tr>
                                 )) : (
-                                    <tr><td colSpan="4" className="p-20 text-center text-slate-400 font-bold uppercase text-xs tracking-widest italic">No students matched. Verify class names in profile.</td></tr>
+                                    <tr><td colSpan="4" className="p-20 text-center text-slate-400 font-bold uppercase text-xs tracking-widest italic">No students matched for this class.</td></tr>
                                 )}
                                 </tbody>
                             </table>
@@ -160,13 +169,13 @@ const StudentMonitoring = () => {
                                 <motion.div key={selectedStudent.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-white dark:bg-slate-900 rounded-[40px] border border-blue-100 dark:border-slate-800 p-8 shadow-2xl sticky top-24">
                                     <div className="flex justify-between items-start mb-8">
                                         <div className="h-14 w-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-xl font-black uppercase">
-                                            {(selectedStudent.name || selectedStudent.username || "U").charAt(0)}
+                                            {(selectedStudent.name).charAt(0)}
                                         </div>
                                         {selectedStudent.currentRisk >= 55 ? <AlertTriangle className="text-red-500 w-6 h-6 animate-pulse" /> : <UserCheck className="text-emerald-500 w-6 h-6" />}
                                     </div>
 
-                                    <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter mb-1">{selectedStudent.name || selectedStudent.username}</h3>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Last Updated: {selectedStudent.lastMonth}</p>
+                                    <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tighter mb-1">{selectedStudent.name}</h3>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Status: {selectedStudent.lastMonth}</p>
 
                                     <div className="space-y-6">
                                         <div>
@@ -183,8 +192,8 @@ const StudentMonitoring = () => {
                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">AI Intervention Strategy</p>
                                             <p className="text-sm font-bold text-slate-700 dark:text-slate-300 italic">
                                                 {selectedStudent.currentRisk >= 55
-                                                    ? "Schedule a parent-teacher meeting. Priority: Socio-economic support."
-                                                    : "Student shows stability. Maintain current monitoring frequency."}
+                                                    ? "Critical: Schedule a parent-teacher meeting immediately."
+                                                    : "Stability: Student shows consistent performance."}
                                             </p>
                                         </div>
 
@@ -199,14 +208,13 @@ const StudentMonitoring = () => {
                             ) : (
                                 <div className="bg-white dark:bg-slate-900 rounded-[40px] border-4 border-dashed border-slate-100 dark:border-slate-800 p-20 text-center flex flex-col items-center justify-center h-full min-h-[400px]">
                                     <Search className="w-10 h-10 text-slate-200 dark:text-slate-800 mb-4" />
-                                    <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.3em]">Select a student to view details</p>
+                                    <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.3em]">Select a student</p>
                                 </div>
                             )}
                         </AnimatePresence>
                     </div>
                 </div>
 
-                {/* Audit Modal Logic (UNCHANGED) */}
                 <AnimatePresence>
                     {showAudit && selectedStudent && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
@@ -217,40 +225,42 @@ const StudentMonitoring = () => {
                                         <div className="p-3 bg-blue-600 rounded-2xl text-white"><FileText className="w-6 h-6" /></div>
                                         <div>
                                             <h2 className="text-2xl font-black dark:text-white uppercase tracking-tighter">Academic Audit Report</h2>
-                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">ID: {selectedStudent.id?.slice(0, 8)} • {selectedStudent.email}</p>
+                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedStudent.email}</p>
                                         </div>
                                     </div>
                                     <button onClick={() => setShowAudit(false)} className="p-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-all"><X className="dark:text-white" /></button>
                                 </div>
-                                <div className="p-10 overflow-y-auto space-y-10">
+                                <div className="p-10 overflow-y-auto space-y-10 text-slate-800 dark:text-white">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[30px] border dark:border-slate-800 text-center">
                                             <Calendar className="w-5 h-5 mx-auto mb-2 text-blue-500" />
                                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Attendance</p>
-                                            <p className="text-2xl font-black dark:text-white">{selectedStudent.attendance}%</p>
+                                            <p className="text-2xl font-black">{selectedStudent.attendance}%</p>
                                         </div>
                                         <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[30px] border dark:border-slate-800 text-center">
                                             <Activity className="w-5 h-5 mx-auto mb-2 text-emerald-500" />
                                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Participation</p>
-                                            <p className="text-2xl font-black dark:text-white">{selectedStudent.participation || '8'}/10</p>
+                                            <p className="text-2xl font-black">{selectedStudent.class_participation || '5'}/10</p>
                                         </div>
                                         <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[30px] border dark:border-slate-800 text-center">
                                             <BarChart3 className="w-5 h-5 mx-auto mb-2 text-purple-500" />
                                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Risk Score</p>
-                                            <p className="text-2xl font-black dark:text-white">{selectedStudent.currentRisk}%</p>
+                                            <p className="text-2xl font-black">{selectedStudent.currentRisk}%</p>
                                         </div>
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-black dark:text-white uppercase tracking-widest mb-4">Historical Performance Log</h3>
+                                        <h3 className="text-sm font-black uppercase tracking-widest mb-4">Historical Performance Log</h3>
                                         <div className="border dark:border-slate-800 rounded-[30px] overflow-hidden">
                                             <table className="w-full text-left text-xs">
                                                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                                <tr><th className="p-4">Month</th><th className="p-4">Risk Score</th><th className="p-4">GPA</th><th className="p-4">Status</th></tr>
+                                                <tr><th className="p-4">Month</th><th className="p-4">Risk Score</th><th className="p-4">Status</th></tr>
                                                 </thead>
-                                                <tbody className="font-bold dark:text-slate-300">
-                                                {selectedStudent.fullHistory?.map((log, idx) => (
-                                                    <tr key={idx} className="border-t dark:border-slate-800"><td className="p-4 uppercase">{log.month}</td><td className="p-4">{log.riskScore}%</td><td className="p-4">{log.gpa}</td><td className="p-4"><span className={log.riskLabel === 'High Risk' ? 'text-red-500' : 'text-emerald-500'}>{log.riskLabel}</span></td></tr>
-                                                ))}
+                                                <tbody className="font-bold">
+                                                {selectedStudent.fullHistory?.length > 0 ? selectedStudent.fullHistory.map((log, idx) => (
+                                                    <tr key={idx} className="border-t dark:border-slate-800"><td className="p-4 uppercase">{log.month}</td><td className="p-4">{log.riskScore}%</td><td className="p-4"><span className={log.riskLabel === 'High Risk' ? 'text-red-500' : 'text-emerald-500'}>{log.riskLabel}</span></td></tr>
+                                                )) : (
+                                                    <tr className="border-t dark:border-slate-800"><td colSpan="3" className="p-6 text-center italic opacity-40 uppercase">No prior teacher analysis synced</td></tr>
+                                                )}
                                                 </tbody>
                                             </table>
                                         </div>

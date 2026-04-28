@@ -1,5 +1,3 @@
-import React from "react";
-
 const SkeletonRegistry = () => {
     return (
         <div className="p-10 bg-white dark:bg-slate-900 min-h-screen animate-pulse">

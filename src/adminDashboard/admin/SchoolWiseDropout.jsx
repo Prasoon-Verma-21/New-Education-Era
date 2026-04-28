@@ -1,5 +1,3 @@
-import React from "react";
-
 const SchoolWiseDropout = () => {
   // Research-backed data for Jan 2026 Review
   const schoolData = [
