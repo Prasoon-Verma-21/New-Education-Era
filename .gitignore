@@ -19,3 +19,8 @@
 .env.development.local
 .env.test.local
 .env.production.local
+serviceAccountKey.json
+.env
+your_project_data.csv
+export_data.js
+ml_tuning.py
