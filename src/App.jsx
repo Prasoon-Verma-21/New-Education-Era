@@ -51,7 +51,7 @@ import StudentPortal from "./components/StudentPortal";
 import { Toaster } from 'react-hot-toast';
 import AdminDashboard from "./components/AdminDashboard";
 import { useAuth } from "./context/AuthContext";
-import SideNav from "./adminDashboard/navigation/sidenav";
+import SideNav from "./adminDashboard/navigation/SideNav";
 
 function App() {
   const { isLoggedIn, loading } = useAuth();
