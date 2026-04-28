@@ -6,7 +6,7 @@ import { useTheme } from "../context/ThemeContext"; // 1. Theme Hook
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Sun, Moon } from "lucide-react"; // 2. Icons
-import logo from "../assets/logo.webp";
+import logo from "../assets/Logo.webp";
 
 const Navbar = () => {
   const { isLoggedIn, setIsLoggedIn } = useAuth();
