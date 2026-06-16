@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import PropTypes from 'prop-types'; // FIX 1: ADDED THIS
+import { useState } from 'react'; // Added useState import
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import EarlyWarning from './pages/EarlyWarning';
@@ -23,12 +23,12 @@ import ParentingFAQs from './Parent\'s Corner/ParentingFaq';
 import './index.css';
 import Footer from "./components/Footer";
 import About from "./pages/About";
-import StudentDashboard from "./components/StudentDashboard";
 import ChatBox from "./chatbot/ChatBot";
 import CalendarView from "./Schooling/CalendarView";
 import ProgressPage from "./Schooling/ProgressPage";
 import CombinedPage from "./Schooling/CombinedCourse";
 import Admin from "./adminDashboard/Admin";
+
 import RewardSystem from "./components/RewardSystem";
 import Store from "./components/Store";
 import ExpertDashboard from "./components/ExpertDashboard";
@@ -44,85 +44,104 @@ import CoolegeWiseDropout from "./adminDashboard/admin/SchoolWiseDropout";
 import Contact from './pages/Contact';
 import DropoutAnalytics from './pages/DropoutAnalytics';
 import StudentMonitoring from './pages/StudentMonitoring';
-
-// FIX 2: Added PropTypes to the placeholder
-const DashboardPlaceholder = ({ role }) => (
-    <div className="p-10 text-center pt-24">
-      <h1 className="text-3xl font-bold text-blue-600 capitalize">{role} Dashboard</h1>
-      <p className="mt-4 text-gray-600">Welcome to the New Education Era portal. Your specialized tools are being initialized for Review 2.</p>
-      <button onClick={() => window.location.href='/'} className="mt-6 bg-blue-500 text-white px-4 py-2 rounded">Back to Home</button>
-    </div>
-);
-
-DashboardPlaceholder.propTypes = {
-  role: PropTypes.string.isRequired
-};
+import HeadmasterDashboard from "./pages/HeadmasterDashboard";
+import TeacherDashboard from "./pages/TeacherDashboard";
+import DistrictDashboard from "./pages/DistrictDashboard";
+import StudentPortal from "./components/StudentPortal";
+import { Toaster } from 'react-hot-toast';
+import AdminDashboard from "./components/AdminDashboard";
+import { useAuth } from "./context/AuthContext";
+import SideNav from "./adminDashboard/navigation/SidebarNavigation";
 
 function App() {
+  const { isLoggedIn, loading } = useAuth();
+  const [adminTab, setAdminTab] = useState("dashboard");
+
+  if (loading) return null;
+
   return (
       <Router>
+        <Toaster position="top-right" reverseOrder={false} />
         <div className="overflow-hidden"><Navbar /></div>
         <div className="mt-16 bg-gray-50 overflow-auto min-h-screen">
-
           <Routes>
+            {/* Standard Routes */}
             <Route path="/" element={<Home />} />
-            <Route path="/early-warning" element={
+            <Route path="/about" element={<About /> } />
+            <Route path="/contact" element={<Contact role="Contact Us" />} />
+            <Route path="/signin" element={<LoginSignupModal />} />
+            <Route path="/signup" element={<LoginSignupModal />} />
 
-                <EarlyWarning />
+            {/* Monitoring & Hubs */}
+            <Route path="/early-warning" element={<ProtectedRoute><EarlyWarning /></ProtectedRoute>} />
+            <Route path="/dropout-analytics" element={<ProtectedRoute><DropoutAnalytics onBack={() => window.history.back()} /></ProtectedRoute>} />
+            <Route path="/student-monitoring" element={<ProtectedRoute><StudentMonitoring /></ProtectedRoute>} />
 
-            } />
             <Route path="/learning-hub" element={<ProtectedRoute><LearningHub /></ProtectedRoute>}/>
-            <Route path="/financial-support" element={<ProtectedRoute><FinancialSupport /></ProtectedRoute>} />
-            <Route path="/parental-engagement" element={<ProtectedRoute><ParentPortal /></ProtectedRoute>} />
             <Route path='/learning-hub/online-consultation' element={<ProtectedRoute><OnlineConsultation /></ProtectedRoute>} />
             <Route path='/learning-hub/resource-library' element={<ProtectedRoute><ResourceLibrary /></ProtectedRoute>} />
             <Route path='/learning-hub/virtual-tutoring' element={<ProtectedRoute><VirtualTutoring /></ProtectedRoute>} />
             <Route path='/learning-hub/community-forums' element={<ProtectedRoute><CommunityForums /></ProtectedRoute>} />
             <Route path='/learning-hub/community-forums/:forumName' element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
             <Route path='/learning-hub/virtual-tutoring/booking' element={<ProtectedRoute><BookingConfirmation /></ProtectedRoute>} />
+
+            <Route path="/financial-support" element={<ProtectedRoute><FinancialSupport /></ProtectedRoute>} />
             <Route path='/financial-support/scholarships' element={<ProtectedRoute><Scholarships /></ProtectedRoute>} />
             <Route path='/financial-support/grants' element={<ProtectedRoute><Grants /></ProtectedRoute>} />
             <Route path='/financial-support/loans' element={<ProtectedRoute><Loans /></ProtectedRoute>} />
             <Route path='/financial-support/faq' element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
+
+            <Route path="/parental-engagement" element={<ProtectedRoute><ParentPortal /></ProtectedRoute>} />
             <Route path="/parental-engagement/resources" element={<ProtectedRoute><ParentingResources /></ProtectedRoute>} />
             <Route path="/parental-engagement/communication" element={<ProtectedRoute><CommunicationTips /></ProtectedRoute>} />
             <Route path="/parental-engagement/events" element={<ProtectedRoute><UpcomingEvents /></ProtectedRoute>} />
             <Route path="/parental-engagement/faq" element={<ProtectedRoute><ParentingFAQs /></ProtectedRoute>} />
+
             <Route path="/flexible-schooling" element={<ProtectedRoute><SchoolingManagement /></ProtectedRoute>} />
             <Route path="/schooling/courses" element={<ProtectedRoute><CombinedPage /></ProtectedRoute>} />
             <Route path="/schooling/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
             <Route path="/schooling/studentSchedule" element={<ProtectedRoute><CalendarView /></ProtectedRoute>} />
-            <Route path="/about" element={<About /> } />
-            <Route path="/student/dashboard" element={<ProtectedRoute><StudentDashboard /></ProtectedRoute>} />
-            <Route path="/admin" element={<Admin />} />
+
+            {/* Dashboards */}
+            <Route path="/student-dashboard" element={<ProtectedRoute role="student"><StudentPortal /></ProtectedRoute>} />
+            <Route path="/teacher-dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
+            <Route path="/headmaster-dashboard" element={<ProtectedRoute role="headmaster"><HeadmasterDashboard /></ProtectedRoute>} />
+            <Route path="/district_official-dashboard" element={<ProtectedRoute role="district_official"><DistrictDashboard /></ProtectedRoute>} />
+            <Route path="/expert-dashboard" element={<ProtectedRoute role="expert"><ExpertDashboard /></ProtectedRoute>} />
+            <Route path="/tutor-dashboard" element={<ProtectedRoute role="tutor"><TutorDashboard /></ProtectedRoute>} />
+            <Route path="/parent-dashboard" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
+
+            {/* Unified Admin Dashboard */}
+            <Route
+                path="/admin-dashboard"
+                element={
+                  <ProtectedRoute role="admin">
+                    <div className="flex">
+                      <SideNav onPageChange={setAdminTab} currentPage={adminTab} />
+                      <AdminDashboard activeTab={adminTab} />
+                    </div>
+                  </ProtectedRoute>
+                }
+            />
+
             <Route path="/reward" element={<ProtectedRoute><RewardSystem /></ProtectedRoute>} />
             <Route path="/shop" element={<ProtectedRoute><Store /></ProtectedRoute>} />
-            <Route path="/expert/dashboard" element={<ProtectedRoute><ExpertDashboard /></ProtectedRoute>} />
-            <Route path="/tutor/dashboard" element={<ProtectedRoute><TutorDashboard /></ProtectedRoute>} />
-            <Route path="/parent/dashboard" element={<ProtectedRoute><ParentDashboard /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><QRScanner /></ProtectedRoute>} />
+            <Route path="/complaint" element={<ProtectedRoute><StudentGrievanceForm /></ProtectedRoute>} />
             <Route path="/subadmin/student-details" element={<StudentAdminDashboard />} />
             <Route path="/admin/school-dropout" element={<CoolegeWiseDropout />} />
-            <Route path="/signup" element={<LoginSignupModal />} />
-            <Route path="/complaint" element={<ProtectedRoute><StudentGrievanceForm /></ProtectedRoute>} />
-            <Route path="/signin" element={<LoginSignupModal />} />
-            <Route path="/teacher/dashboard" element={<DashboardPlaceholder role="Teacher" />} />
-            <Route path="/dropout-analytics" element={
 
-                <DropoutAnalytics />
 
-            } />
-            <Route path="/student-monitoring" element={
+            {/* Redirects & Legacy */}
+            <Route path="/admin" element={<Navigate to="/admin-dashboard" replace />} />
+            <Route path="/student/dashboard" element={<Navigate to="/student-dashboard" replace />} />
+            <Route path="/teacher/dashboard" element={<Navigate to="/teacher-dashboard" replace />} />
 
-                <StudentMonitoring />
-
-            } />
-            <Route path="/contact" element={<Contact role="Contact Us" />} />
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
           <ChatBox />
         </div>
         <Footer />
-
       </Router>
   );
 }

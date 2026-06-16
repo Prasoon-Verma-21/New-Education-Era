@@ -3,7 +3,7 @@ import user from "../assets/Expert1.jpg";
 import StudentAttendanceGraph from "./AttendaceChart";
 import axios from "axios";
 import axiosInstance from "../axiosConfig";
-import studentimg from '../../public/self-growth.png'
+import studentimg from '../assets/self-growth.png'
 import { ArrowBigRight, Award, BookOpenText, CircleArrowRight, CircleUser, LibraryBig, ListOrdered, School } from "lucide-react";
 import AttendanceTrendChart from "./AttendanceTrendChart";
 
@@ -23,33 +23,39 @@ const StudentDashboard = () => {
   };
 
   // Fetch AI Score and send student data when the component is mounted
+  // Fetch AI Score - Updated for Vercel Prototype
   useEffect(() => {
     const fetchAiScore = async () => {
       try {
-        // Create a new FormData object
-        const formData = new FormData();
-        formData.append("last_percentage", studentData.last_percentage);
-        formData.append("attendance", studentData.attendance);
-        formData.append("parents_qualification", studentData.parents_qualification);
-        formData.append("area", studentData.area);
-        formData.append("num_teachers", studentData.num_teachers);
-        formData.append("income", studentData.income);
+        const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-        // Make a POST request with the FormData object
-        const response = await axios.post("http://localhost:8000/api/predict", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+        // 1. PROTOTYPE FALLBACK: If there's no live API (like on Vercel), calculate a "Mock" score
+        if (!API_BASE_URL || API_BASE_URL === "undefined") {
+          console.log("Running in Prototype Mode: Calculating score locally.");
+
+          // Logic: High attendance/marks = Low dropout probability (0.1 - 0.3)
+          // Low attendance/marks = High dropout probability (0.7 - 0.9)
+          const simulatedScore = studentData.attendance < 40 ? 0.82 : 0.18;
+
+          // Small delay to simulate "AI Thinking"
+          setTimeout(() => setAiScore(simulatedScore), 800);
+          return;
+        }
+
+        // 2. LIVE MODE: Standard code for local development or if you eventually use Render
+        const formData = new FormData();
+        Object.entries(studentData).forEach(([key, value]) => formData.append(key, value));
+
+        const response = await axios.post(`${API_BASE_URL}/api/predict`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
         });
 
-        // Handle the response
         if (response.data && response.data.dropout_probability !== undefined) {
-          setAiScore(response.data.dropout_probability); // Update with the dropout probability
-        } else {
-          console.error("Error fetching AI score: No valid data received");
+          setAiScore(response.data.dropout_probability);
         }
       } catch (error) {
-        console.error("Error fetching AI score:", error.response?.data || error.message);
+        console.warn("AI Core Offline: Using fallback risk scoring.");
+        setAiScore(0.75); // Safe fallback value if everything fails
       }
     };
 

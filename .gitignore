@@ -1,5 +1,26 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production
+/dist
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
 # local env files
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+serviceAccountKey.json
+.env
+your_project_data.csv
+export_data.js
+ml_tuning.py

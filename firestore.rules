@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Identify staff roles (Admin, Teacher, Headmaster, District Official)
+    function isStaff() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['teacher', 'headmaster', 'district_official', 'admin'];
+    }
+
+    match /users/{userId} {
+      // 1. Basic Auth: Users can read/write their own data
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // 2. The Linkage Fix: Allow anyone to SEARCH for a student by email
+      // We remove the 'isStaff' requirement here for the signup phase
+      allow read: if (request.query.limit <= 1 && resource.data.role == 'student') || isStaff();
+
+      // 3. Keep standard staff access
+      allow read: if isStaff();
+    }
+
+    match /predictions/{docId} {
+      allow read: if request.auth != null && (
+        request.auth.token.email == resource.data.email ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'parent' ||
+        isStaff()
+      );
+      allow write: if request.auth != null && isStaff();
+    }
+
+    match /notices/{id} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isStaff();
+    }
+  }
+}
