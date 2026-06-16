@@ -1,20 +1,80 @@
-# React + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 # New-Education-Era
 
-#Steps to run the project:-
-1. clone the repo
+A comprehensive, cloud-hosted educational management ecosystem designed to bridge communication and visibility gaps between administrators, teachers, and parents. The platform replaces traditional static data storage with an active, machine learning-driven "Intelligence Feed" powered by XGBoost to provide real-time dropout risk detection and enable proactive academic interventions.
 
-2. In the main root directory:
+---
 
- i. npm install
+## 🚀 Key Features
 
- ii. npm run dev
+* **Role-Based Dashboards:** Secure, custom interface configurations for Administrators, Teachers, and Students/Parents.
+* **Predictive Analytics:** An integrated XGBoost machine learning module that analyzes sparse student metrics to track engagement anomalies.
+* **Real-Time Synchronization:** Robust backend data architecture utilizing Firebase for live updates across all distributed portals.
+* **Cloud Infrastructure:** Production-ready deployment architecture optimized for fast load times and high availability.
 
-3.Open the localhost link in your browser.
+---
+
+## 🛠️ Tech Stack
+
+* **Frontend:** React.js, Vite
+* **Backend & Security:** Firebase Authentication, Firestore Real-time Database
+* **Machine Learning Engine:** XGBoost, Python
+* **Deployment & CI/CD:** Vercel Global Edge Network
+
+---
+
+## 📦 Getting Started
+
+### Prerequisites
+
+* Node.js (v18 or higher recommended)
+* npm
+
+### Installation
+
+1. Clone the repository:
+```bash
+
+```
+
+
+
+git clone https://github.com/Prasoon-Verma-21/New-Education-Era.git
+cd New-Education-Era
+
+```
+
+2. Install the dependencies using the legacy peer-deps flag to resolve dependency trees:
+   ```bash
+npm install --legacy-peer-deps
+
+```
+
+### Running Locally
+
+1. Start the local development server:
+```bash
+
+```
+
+
+
+npm run dev
+
+```
+2. Open the generated `localhost` link in your browser.
+
+### Building for Production
+To generate a production-ready build locally:
+```bash
+npm run build
+
+```
+
+---
+
+## 🌐 Production Deployment
+
+The project is actively hosted on the Vercel Edge Network. You can access the live application prototype here:
+👉 **[era-education-system.vercel.app](https://www.google.com/search?q=https://era-education-system.vercel.app)**
+
+*Continuous Integration (CI/CD) is configured to automatically redeploy updates when code is pushed to the production branch.*
