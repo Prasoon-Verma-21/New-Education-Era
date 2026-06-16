@@ -79,6 +79,6 @@ npm run build
 ## 🌐 Production Deployment
 
 The project is actively hosted on the Vercel Edge Network. You can access the live application prototype here:
-👉 **[era-education-system.vercel.app](https://www.google.com/search?q=https://era-education-system.vercel.app)**
+👉 **[era-education-system.vercel.app](https://era-education-system.vercel.app)**
 
 *Continuous Integration (CI/CD) is configured to automatically redeploy updates when code is pushed to the production branch.*
