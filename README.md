@@ -1,5 +1,7 @@
 ```markdown
-<h1 align="center" style="font-size: 2.5rem; font-weight: bold;">🎓 New-Education-Era</h1>
+<p align="center">
+  # 🎓 New-Education-Era
+</p>
 
 <p align="center">
   <strong>A proactive, cloud-hosted educational management ecosystem featuring predictive machine learning analytics.</strong>
@@ -39,28 +41,27 @@ A comprehensive, cloud-hosted educational management ecosystem designed to bridg
 ### Installation
 
 1. Clone the repository:
-   ```bash
+```bash
    git clone [https://github.com/Prasoon-Verma-21/New-Education-Era.git](https://github.com/Prasoon-Verma-21/New-Education-Era.git)
    cd New-Education-Era
 
 ```
 
 2. Install the dependencies using the legacy peer-deps flag to resolve dependency trees:
+
 ```bash
-npm install --legacy-peer-deps
+   npm install --legacy-peer-deps
 
 ```
-
-
 
 ### Running Locally
 
 1. Start the local development server:
+
 ```bash
-npm run dev
+   npm run dev
 
 ```
-
 
 2. Open the generated `localhost` link in your browser.
 
