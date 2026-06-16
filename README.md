@@ -1,9 +1,9 @@
-```markdown
-<p align="center">
-  # 🎓 New-Education-Era
-</p>
 
-<p align="center">
+
+  # 🎓 New-Education-Era
+
+
+<p align="Left">
   <strong>A proactive, cloud-hosted educational management ecosystem featuring predictive machine learning analytics.</strong>
 </p>
 
@@ -82,7 +82,3 @@ The project is actively hosted on the Vercel Edge Network. You can access the li
 👉 **[era-education-system.vercel.app](https://www.google.com/search?q=https://era-education-system.vercel.app)**
 
 *Continuous Integration (CI/CD) is configured to automatically redeploy updates when code is pushed to the production branch.*
-
-```
-
-```
