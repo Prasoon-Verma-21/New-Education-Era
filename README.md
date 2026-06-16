@@ -42,7 +42,7 @@ A comprehensive, cloud-hosted educational management ecosystem designed to bridg
 
 1. Clone the repository:
 ```bash
-   git clone [https://github.com/Prasoon-Verma-21/New-Education-Era.git](https://github.com/Prasoon-Verma-21/New-Education-Era.git)
+   git clone https://github.com/Prasoon-Verma-21/New-Education-Era.git
    cd New-Education-Era
 
 ```
